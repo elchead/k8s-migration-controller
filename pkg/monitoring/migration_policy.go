@@ -1,0 +1,70 @@
+package monitoring
+
+import (
+	"errors"
+
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
+)
+
+type MigrationPolicy interface {
+	GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
+}
+
+type MaxMigrator struct {
+	Cluster Cluster
+	Client  Clienter
+}
+
+func (c MaxMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	podMems, err := c.Client.GetPodMemories(request.Node)
+	if err != nil {
+		return nil, err
+	}
+	pod := GetMaxPod(podMems)
+	podMem := podMems[pod]
+	if podMem < request.Amount {
+		err = errors.New("migration does not fullfill request")
+	}
+	return []migration.MigrationCmd{{Pod: pod, Usage: podMem}}, err
+}
+
+type BigEnoughMigrator struct {
+	Cluster Cluster
+	Client  Clienter
+}
+
+func (c BigEnoughMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	podMems, err := c.Client.GetPodMemories(request.Node)
+	if err != nil {
+		return nil, err
+	}
+
+	pod := GetMinPodBiggerThan(podMems, request.Amount)
+	podMem := podMems[pod]
+	if podMem < request.Amount {
+		err = errors.New("migration does not fullfill request")
+	}
+	return []migration.MigrationCmd{{Pod: pod, Usage: podMem}}, err
+}
+
+func GetMinPodBiggerThan(pods PodMemMap, amount float64) (pod string) {
+	min := 9999.
+	for p, mem := range pods {
+		if mem < min && mem >= amount {
+			min = mem
+			pod = p
+		}
+	}
+	return pod
+}
+
+func GetMaxPod(pods PodMemMap) (pod string) {
+	max := -1.
+	for p, mem := range pods {
+		if mem > max {
+			max = mem
+			pod = p
+		}
+	}
+	return pod
+}
