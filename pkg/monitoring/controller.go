@@ -6,6 +6,10 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 
+type ControllerI interface {
+	GetMigrations() (migrations []migration.MigrationCmd, err error)
+}
+
 type Controller struct {
 	Requester RequestPolicy
 	Migrator  MigrationPolicy
