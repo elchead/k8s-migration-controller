@@ -20,3 +20,10 @@ func TestIsEnoughSpaceAvailable(t *testing.T) {
 		assert.Equal(t, "z1", sut.ValidateMigrationsTo("z2", 35.))
 	})
 }
+
+func TestGetNodeFreeRequest(t *testing.T) {
+	cluster := NewTestCluster()
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"z2_w": 40., "z2_q": 45.}, monitoring.PodMemMap{"z1_w": 1., "z1_q": 30.})
+	sut := monitoring.NewThresholdPolicyWithCluster(40., cluster, mockClient)
+	assert.Equal(t,[]monitoring.NodeFreeGbRequest([]monitoring.NodeFreeGbRequest{{Node:"z2", Amount:25}}),sut.GetNodeFreeGbRequests())	
+}

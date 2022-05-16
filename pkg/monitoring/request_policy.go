@@ -31,7 +31,7 @@ func (t ThresholdPolicy) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequ
 }
 
 func (t ThresholdPolicy) getFreeGbAmount(availablePercent float64) float64 {
-	targetAvailableGb := t.ThresholdFreePercent * t.Cluster.NodeGb
+	targetAvailableGb := t.ThresholdFreePercent / 100. * t.Cluster.NodeGb
 	availableGb := t.Cluster.getAvailableGb(availablePercent)
 	return targetAvailableGb - availableGb
 
