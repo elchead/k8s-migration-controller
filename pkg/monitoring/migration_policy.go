@@ -1,7 +1,7 @@
 package monitoring
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
@@ -23,7 +23,7 @@ func (c MaxMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.Mi
 	pod := GetMaxPod(podMems)
 	podMem := podMems[pod]
 	if podMem < request.Amount {
-		err = errors.New("migration does not fullfill request")
+		err = fmt.Errorf("migration of pod (%f) on node %s does not fullfill request (%f)", podMem,request.Node, request.Amount)
 	}
 	return []migration.MigrationCmd{{Pod: pod, Usage: podMem}}, err
 }
@@ -42,7 +42,7 @@ func (c BigEnoughMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migrat
 	pod := GetMinPodBiggerThan(podMems, request.Amount)
 	podMem := podMems[pod]
 	if podMem < request.Amount {
-		err = errors.New("migration does not fullfill request")
+		err = fmt.Errorf("migration of pod (%f) on node %s does not fullfill request (%f)", podMem,request.Node, request.Amount)
 	}
 	return []migration.MigrationCmd{{Pod: pod, Usage: podMem}}, err
 }

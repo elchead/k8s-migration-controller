@@ -1,9 +1,8 @@
 package monitoring
 
 import (
-	"log"
-
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
+	"github.com/pkg/errors"
 )
 
 type ControllerI interface {
@@ -35,7 +34,7 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 	for _, request := range nodeFreeRequests {
 		cmds, err := c.Migrator.GetMigrationCmds(request)
 		if err != nil {
-			log.Println("Problem during migration request:", err)
+			return nil,errors.Wrap(err, "problem during migration request")
 		}
 		if c.Requester.ValidateMigrationsTo(request.Node, sumPodMemories(cmds)) != "" {
 			// TODO use node name to migrate to
