@@ -9,8 +9,8 @@ func NewCluster() Cluster {
 	return Cluster{NbrNodes: 2, NodeGb: 450.}
 }
 
-func (c Cluster) isSpaceAvailableBefore(nodes []NodeFreeGbRequest) bool {
-	return len(nodes) != c.NbrNodes
+func NewClusterWithSize(sz float64) Cluster {
+	return Cluster{NbrNodes: 2, NodeGb: sz}
 }
 
 func (c Cluster) getFreePercent(freeNodeGb float64) float64 {
