@@ -26,8 +26,10 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 
 	nameMap := make(map[int]string)
 	for name,usage := range podMems {
-		nameMap[len(items)] = name
-		items = append(items,algorithms.Item{Weight: int(usage),Value: int(usage)})
+		if usage > 0 {
+			nameMap[len(items)] = name
+			items = append(items,algorithms.Item{Weight: int(usage),Value: int(usage)})
+		}
 	}
 	capacity := int(request.Amount)
       	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0)
