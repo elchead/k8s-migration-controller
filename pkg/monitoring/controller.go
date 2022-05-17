@@ -1,6 +1,8 @@
 package monitoring
 
 import (
+	"fmt"
+
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/pkg/errors"
 )
@@ -23,10 +25,13 @@ func NewController(requester RequestPolicy, migrater MigrationPolicy) *Controlle
 	return &Controller{requester, migrater}
 }
 
-type NodeFullError struct{}
+type NodeFullError struct{
+	Request NodeFreeGbRequest
+	Migrations []migration.MigrationCmd
+}
 
 func (m *NodeFullError) Error() string {
-	return "nodes are full. no place to migrate"
+	return fmt.Sprintf("Migration of pods: %v failed because nodes are full. no place to fullfill request %v",m.Migrations,m.Request)
 }
 
 func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err error) {
@@ -40,7 +45,7 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 			// TODO use node name to migrate to
 			migrations = append(migrations, cmds...)
 		} else {
-			return migrations, &NodeFullError{}
+			return migrations, &NodeFullError{request,cmds}
 		}
 	}
 	return migrations, nil
