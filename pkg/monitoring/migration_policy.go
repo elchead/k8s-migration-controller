@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"fmt"
+	"knapsack/algorithms"
 
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
@@ -9,6 +10,36 @@ import (
 type MigrationPolicy interface {
 	GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
 }
+
+
+type OptimalMigrator struct {
+	Cluster Cluster
+	Client  Clienter
+}
+
+func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	podMems, err := m.Client.GetPodMemories(request.Node)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]algorithms.Item, 0, len(podMems))
+
+	nameMap := make(map[int]string)
+	for name,usage := range podMems {
+		nameMap[len(items)] = name
+		items = append(items,algorithms.Item{Weight: int(usage),Value: int(usage)})
+	}
+	capacity := int(request.Amount)
+      	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0)
+	
+	migrations := make([]migration.MigrationCmd, 0, len(bestConfig))
+	for _, idx := range bestConfig {
+		pod := nameMap[idx] 
+		migrations = append(migrations, migration.MigrationCmd{Pod: pod, Usage: podMems[pod]})
+	}
+	return migrations, nil
+}
+
 
 type MaxMigrator struct {
 	Cluster Cluster
