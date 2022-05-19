@@ -3,6 +3,8 @@ package monitoring
 import (
 	"fmt"
 	"knapsack/algorithms"
+	"log"
+	"math"
 
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
@@ -22,17 +24,10 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	if err != nil {
 		return nil, err
 	}
-	items := make([]algorithms.Item, 0, len(podMems))
-
-	nameMap := make(map[int]string)
-	for name,usage := range podMems {
-		if usage > 0 {
-			nameMap[len(items)] = name
-			items = append(items,algorithms.Item{Weight: int(usage),Value: int(usage)})
-		}
-	}
+	items, nameMap := createItemsAndNameMap(podMems)
 	capacity := int(request.Amount)
-      	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0)
+      	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
+	// _,bestConfig := algorithms.KnapsackDynamicWeight(capacity, items,)
 	
 	migrations := make([]migration.MigrationCmd, 0, len(bestConfig))
 	for _, idx := range bestConfig {
@@ -40,6 +35,29 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 		migrations = append(migrations, migration.MigrationCmd{Pod: pod, Usage: podMems[pod]})
 	}
 	return migrations, nil
+}
+
+func createItemsAndNameMap(podMems PodMemMap) ([]algorithms.FItem, map[int]string) {
+	items := make([]algorithms.FItem, 0, len(podMems))
+
+	nameMap := make(map[int]string)
+	for name, usage := range podMems {
+		if usage > 0 {
+			nameMap[len(items)] = name
+			nbrMigrations,err := podMems.CountMigrations(name)
+			if err != nil {
+				log.Printf("Could not find pod %s to evaluate it's migration cost. Skipping it in migration decision", name)
+				continue
+			}
+			value := getValueWithPunishedMigration(nbrMigrations,usage)
+			items = append(items, algorithms.FItem{Weight: int(usage), Value: value})
+		}
+	}
+	return items, nameMap
+}
+
+func getValueWithPunishedMigration(nbrMigrations int, size float64) float64 {
+	return math.Pow(.5,float64(nbrMigrations))*size
 }
 
 

@@ -1,12 +1,12 @@
 package main
 
-import (
-	"os"
-	"testing"
+// import (
+// 	"os"
+// 	"testing"
 
-	"github.com/stretchr/testify/assert"
-)
+// 	"github.com/stretchr/testify/assert"
+// )
 
-func TestGetToken(t *testing.T) {
-	assert.NotEqual(t, "", os.Getenv("INFLUXDB_TOKEN"))
-}
+// func TestGetToken(t *testing.T) {
+// 	assert.NotEqual(t, "", os.Getenv("INFLUXDB_TOKEN"))
+// }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
@@ -41,6 +42,16 @@ func (c *Client) Query(query string) (*api.QueryTableResult, error) {
 }
 
 type PodMemMap map[string]float64
+
+func (c PodMemMap) CountMigrations(name string) (int,error) { 
+	_, ok := c[name]
+	if !ok {
+		return 0, fmt.Errorf("pod %s not found", name)
+	}
+	onlyMPrefix := strings.Split(name,"o")[0]
+	return strings.Count(onlyMPrefix,"m"), nil
+	
+}
 
 func (c *Client) GetPodMemoriesFromContainer(nodeName, containerName string) (PodMemMap, error) {
 	query := fmt.Sprintf(`from(bucket: "%s") 
