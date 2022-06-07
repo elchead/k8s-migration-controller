@@ -22,7 +22,7 @@ func NewSlopePolicyWithClusterAndTime(percent,predictionTime float64, cluster Cl
 
 
 func NewSlopePolicyWithCluster(percent float64, cluster Cluster, client Clienter) *SlopeRequester {
-	return &SlopeRequester{percent,cluster, client,5.}
+	return &SlopeRequester{percent,cluster, client,10.}
 }
 
 func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {

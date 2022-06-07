@@ -15,15 +15,16 @@ type ControllerI interface {
 type Controller struct {
 	Requester RequestPolicy
 	Migrator  MigrationPolicy
+	MinRequestSize float64
 }
 
 // TODO remove
 func NewControllerWithPolicy(policy *ThresholdPolicy) *Controller {
-	return &Controller{policy, &MaxMigrator{policy.Cluster, policy.Client}}
+	return NewController(policy,&MaxMigrator{policy.Cluster, policy.Client})
 }
 
 func NewController(requester RequestPolicy, migrater MigrationPolicy) *Controller {
-	return &Controller{requester, migrater}
+	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:7.}
 }
 
 type NodeFullError struct{
@@ -38,6 +39,10 @@ func (m *NodeFullError) Error() string {
 func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err error) {
 	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
 	for _, request := range nodeFreeRequests {
+		if request.Amount < c.MinRequestSize {
+			log.Printf("migrator request too small, ignoring %v", request.Amount)
+			return nil, nil
+		}		
 		log.Printf("migrator requesting: %v\n", request)
 		cmds, err := c.Migrator.GetMigrationCmds(request)
 		if err != nil {
