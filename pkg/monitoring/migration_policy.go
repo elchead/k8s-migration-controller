@@ -13,14 +13,14 @@ import (
 func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) MigrationPolicy {
 	switch policy {
 	case "optimal":
-		return &OptimalMigrator{Client: client, Cluster: cluster}
+		return &OptimalMigrator{Client: client, Cluster: cluster,MinSize:5.}
 	case "max":
 		return &MaxMigrator{Cluster: cluster, Client: client}
 	case "big-enough":
 		return &BigEnoughMigrator{Cluster: cluster, Client: client}
 	default:
 		log.Println("Defaulting to optimal migration policy. Unknown policy: ",policy)
-		return &OptimalMigrator{Cluster: cluster, Client: client}
+		return &OptimalMigrator{Cluster: cluster, Client: client,MinSize:5.}
 	}
 }
 
@@ -32,6 +32,7 @@ type MigrationPolicy interface {
 type OptimalMigrator struct {
 	Cluster Cluster
 	Client  Clienter
+	MinSize float64
 }
 
 func removeDuplicateInt(intSlice []int) []int {
@@ -52,7 +53,7 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	if err != nil {
 		return nil, err
 	}
-	items, nameMap := createItemsAndNameMap(podMems)
+	items, nameMap := createItemsAndNameMap(podMems,m.MinSize)
 	capacity := int(request.Amount)
       	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
 	bestConfig = removeDuplicateInt(bestConfig)
@@ -67,12 +68,12 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	return migrations, nil
 }
 
-func createItemsAndNameMap(podMems PodMemMap) ([]algorithms.FItem, map[int]string) {
+func createItemsAndNameMap(podMems PodMemMap,minSize float64) ([]algorithms.FItem, map[int]string) {
 	items := make([]algorithms.FItem, 0, len(podMems))
 
 	nameMap := make(map[int]string)
 	for name, usage := range podMems {
-		if usage > 0 {
+		if usage > minSize {
 			nameMap[len(items)] = name
 			nbrMigrations,err := podMems.CountMigrations(name)
 			if err != nil {

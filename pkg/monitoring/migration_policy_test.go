@@ -45,7 +45,7 @@ func TestBigEnoughMigration(t *testing.T) {
 
 func TestKnapsackMigration(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 25., "or_z2": 40.}, monitoring.PodMemMap{"ow_z1": 10.})
-	sut := monitoring.OptimalMigrator{cluster, mockClient}
+	sut := monitoring.OptimalMigrator{cluster, mockClient,0}
 	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
 	cmds, err := sut.GetMigrationCmds(request)	
 	assert.NoError(t, err)
@@ -53,10 +53,19 @@ func TestKnapsackMigration(t *testing.T) {
 	assert.Contains(t, cmds, migration.MigrationCmd{Pod: "oq_z2", Usage: 25.})
 }
 
+func TestDoNotMigrateSmallJob(t *testing.T) {
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 25., "or_z2": 1.,"oy_z2":6.})
+	sut := monitoring.OptimalMigrator{cluster, mockClient,1.}
+	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
+	cmds, err := sut.GetMigrationCmds(request)	
+	assert.NoError(t, err)
+	assert.NotContains(t, cmds, migration.MigrationCmd{Pod: "or_z2", Usage: 1.})
+}
+
 
 func TestPunishMigratedJobInOptimalMigrator(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 16., "mr_z2": 33.,"ot_z2":17.}, monitoring.PodMemMap{"ow_z1": 10.})
-	sut := monitoring.OptimalMigrator{cluster, mockClient}
+	sut := monitoring.OptimalMigrator{cluster, mockClient,0}
 	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
 	cmds, err := sut.GetMigrationCmds(request)	
 	assert.NoError(t, err)
