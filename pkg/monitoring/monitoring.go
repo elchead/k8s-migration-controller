@@ -17,8 +17,7 @@ type Clienter interface {
 	GetPodMemories(nodeName string) (PodMemMap, error)
 	GetFreeMemoryNode(nodeName string) (float64, error)
 	GetFreeMemoryOfNodes() (NodeFreeMemMap, error)
-	// GetPodMemorySlope(podName, time, slopeWindow string) (float64, error)
-
+	GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error)
 }
 
 type Client struct {
@@ -42,6 +41,14 @@ func (c *Client) Query(query string) (*api.QueryTableResult, error) {
 }
 
 type PodMemMap map[string]float64
+
+func (original PodMemMap) Copy() PodMemMap {
+	cp := make(PodMemMap)
+	for k, v := range original {
+		cp[k] = v
+	}
+	return cp
+}
 
 func (c PodMemMap) CountMigrations(name string) (int,error) { 
 	_, ok := c[name]

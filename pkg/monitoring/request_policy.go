@@ -1,14 +1,58 @@
 package monitoring
 
+import (
+	"log"
+)
+
 type RequestPolicy interface {
 	GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest)
 	ValidateMigrationsTo(originalNode string, migratedMemory float64) string
 }
 
+type SlopeRequester struct {
+	ThresholdFreePercent float64
+	Cluster Cluster
+	Client  Clienter
+}
+
+func NewSlopePolicyWithCluster(percent float64, cluster Cluster, client Clienter) *SlopeRequester {
+	return &SlopeRequester{percent,cluster, client}
+}
+
+func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {
+	nodes, _ := t.Client.GetFreeMemoryOfNodes()
+	// slope := 1.5
+	for node, availablePercent := range nodes {
+		// pods, _ := t.Client.GetPodMemories(node)
+		// for _, podmem := range pods {
+			// }
+		slope, _ := t.Client.GetPodMemorySlope(node, "w_z2", "now", "1m")
+	
+		predictedUsage := slope * 5. // min
+		predictedPercent := t.Cluster.GetUsagePercent(predictedUsage)
+		freePercent := availablePercent - predictedPercent
+		if freePercent < t.ThresholdFreePercent {
+			criticalNodes = append(criticalNodes, NodeFreeGbRequest{Node: node, Amount: getFreeGbAmount(t.ThresholdFreePercent,freePercent,t.Cluster)})
+		}
+	}
+	return criticalNodes
+}
+
+
 type ThresholdPolicy struct {
 	ThresholdFreePercent float64
 	Cluster              Cluster
 	Client               Clienter
+}
+
+func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold float64) RequestPolicy {
+	switch policy {
+	case "thresold":
+		return NewThresholdPolicyWithCluster(threshold,cluster,client)
+	default:
+		log.Println("Defaulting to threshold request policy. Unknown policy: ",policy)
+		return NewThresholdPolicyWithCluster(threshold,cluster,client)
+	}
 }
 
 func NewThresholdPolicyWithCluster(percent float64, cluster Cluster, client Clienter) *ThresholdPolicy {
@@ -31,10 +75,13 @@ func (t ThresholdPolicy) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequ
 }
 
 func (t ThresholdPolicy) getFreeGbAmount(availablePercent float64) float64 {
-	targetAvailableGb := t.ThresholdFreePercent / 100. * t.Cluster.NodeGb
-	availableGb := t.Cluster.getAvailableGb(availablePercent)
-	return targetAvailableGb - availableGb
+	return getFreeGbAmount(t.ThresholdFreePercent,availablePercent,t.Cluster)
+}
 
+func getFreeGbAmount(thresholdPercent,availablePercent float64,cluster Cluster) float64 {
+	targetAvailableGb := thresholdPercent / 100. * cluster.NodeGb
+	availableGb := cluster.getAvailableGb(availablePercent)
+	return targetAvailableGb - availableGb
 }
 
 func (c ThresholdPolicy) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodes NodeFreeMemMap) string {
@@ -42,7 +89,7 @@ func (c ThresholdPolicy) enoughSpaceAvailableOn(originalNode string, podMemory f
 		if node != originalNode {
 			freeGb := c.Cluster.getAvailableGb(freePercent)
 			newFreeGb := freeGb - podMemory
-			if c.Cluster.getFreePercent(newFreeGb) > c.ThresholdFreePercent {
+			if c.Cluster.GetUsagePercent(newFreeGb) > c.ThresholdFreePercent {
 				return node
 			}
 		}
