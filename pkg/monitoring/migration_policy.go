@@ -9,6 +9,21 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 
+
+func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) MigrationPolicy {
+	switch policy {
+	case "optimal":
+		return &OptimalMigrator{Client: client, Cluster: cluster}
+	case "max":
+		return &MaxMigrator{Cluster: cluster, Client: client}
+	case "big-enough":
+		return &BigEnoughMigrator{Cluster: cluster, Client: client}
+	default:
+		log.Println("Defaulting to optimal migration policy. Unknown policy: ",policy)
+		return &OptimalMigrator{Cluster: cluster, Client: client}
+	}
+}
+
 type MigrationPolicy interface {
 	GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
 }

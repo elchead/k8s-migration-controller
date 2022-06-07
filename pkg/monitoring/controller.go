@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/pkg/errors"
@@ -37,12 +38,14 @@ func (m *NodeFullError) Error() string {
 func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err error) {
 	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
 	for _, request := range nodeFreeRequests {
+		log.Printf("migrator requesting: %v\n", request)
 		cmds, err := c.Migrator.GetMigrationCmds(request)
 		if err != nil {
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
 		if c.Requester.ValidateMigrationsTo(request.Node, sumPodMemories(cmds)) != "" {
 			// TODO use node name to migrate to
+			log.Printf("migrator request fulfilled (%v Gb): %v\n",sumPodMemories(cmds), cmds)
 			migrations = append(migrations, cmds...)
 		} else {
 			return migrations, &NodeFullError{request,cmds}

@@ -13,7 +13,7 @@ func NewClusterWithSize(sz float64) Cluster {
 	return Cluster{NbrNodes: 2, NodeGb: sz}
 }
 
-func (c Cluster) getFreePercent(freeNodeGb float64) float64 {
+func (c Cluster) GetUsagePercent(freeNodeGb float64) float64 {
 	return freeNodeGb / c.NodeGb * 100.
 }
 
