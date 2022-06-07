@@ -13,22 +13,29 @@ type SlopeRequester struct {
 	ThresholdFreePercent float64
 	Cluster Cluster
 	Client  Clienter
+	PredictionTime float64
 }
 
+func NewSlopePolicyWithClusterAndTime(percent,predictionTime float64, cluster Cluster, client Clienter) *SlopeRequester {
+	return &SlopeRequester{percent,cluster, client,predictionTime}
+}
+
+
 func NewSlopePolicyWithCluster(percent float64, cluster Cluster, client Clienter) *SlopeRequester {
-	return &SlopeRequester{percent,cluster, client}
+	return &SlopeRequester{percent,cluster, client,5.}
 }
 
 func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {
 	nodes, _ := t.Client.GetFreeMemoryOfNodes()
-	// slope := 1.5
 	for node, availablePercent := range nodes {
-		// pods, _ := t.Client.GetPodMemories(node)
-		// for _, podmem := range pods {
-			// }
-		slope, _ := t.Client.GetPodMemorySlope(node, "w_z2", "now", "1m")
-	
-		predictedUsage := slope * 5. // min
+		pods, _ := t.Client.GetPodMemories(node)
+		slope := 0.
+		for podname := range pods {
+			s, _ := t.Client.GetPodMemorySlope(node, podname, "now", "1m")
+			slope += s	
+			
+		}
+		predictedUsage := slope * t.PredictionTime // min
 		predictedPercent := t.Cluster.GetUsagePercent(predictedUsage)
 		freePercent := availablePercent - predictedPercent
 		if freePercent < t.ThresholdFreePercent {
@@ -38,6 +45,23 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 	return criticalNodes
 }
 
+func (c SlopeRequester) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodes NodeFreeMemMap) string {
+	for node, freePercent := range nodes {
+		if node != originalNode {
+			freeGb := c.Cluster.getAvailableGb(freePercent)
+			newFreeGb := freeGb - podMemory
+			if c.Cluster.GetUsagePercent(newFreeGb) > c.ThresholdFreePercent {
+				return node
+			}
+		}
+	}
+	return ""
+}
+
+func (c SlopeRequester) ValidateMigrationsTo(originalNode string, migratedMemory float64) string {
+	nodes, _ := c.Client.GetFreeMemoryOfNodes()
+	return c.enoughSpaceAvailableOn(originalNode, migratedMemory, nodes)
+}
 
 type ThresholdPolicy struct {
 	ThresholdFreePercent float64
@@ -47,6 +71,8 @@ type ThresholdPolicy struct {
 
 func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold float64) RequestPolicy {
 	switch policy {
+	case "slope":
+		return NewSlopePolicyWithCluster(threshold, cluster, client)
 	case "thresold":
 		return NewThresholdPolicyWithCluster(threshold,cluster,client)
 	default:
