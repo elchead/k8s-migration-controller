@@ -34,6 +34,19 @@ type OptimalMigrator struct {
 	Client  Clienter
 }
 
+func removeDuplicateInt(intSlice []int) []int {
+	allKeys := make(map[int]bool)
+	list := []int{}
+	for _, item := range intSlice {
+	    if _, value := allKeys[item]; !value {
+		allKeys[item] = true
+		list = append(list, item)
+	    }
+	}
+	return list
+    }
+    
+
 func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
 	podMems, err := m.Client.GetPodMemories(request.Node)
 	if err != nil {
@@ -42,6 +55,8 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	items, nameMap := createItemsAndNameMap(podMems)
 	capacity := int(request.Amount)
       	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
+	bestConfig = removeDuplicateInt(bestConfig)
+	// log.Print("migrator optimal config: ",bestConfig)
 	// _,bestConfig := algorithms.KnapsackDynamicWeight(capacity, items,)
 	
 	migrations := make([]migration.MigrationCmd, 0, len(bestConfig))
