@@ -54,10 +54,13 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 		return nil, err
 	}
 	items, nameMap := createItemsAndNameMap(podMems,m.MinSize)
+
+	// fmt.Printf("ITEMS: %+v\n",items)
 	capacity := int(request.Amount)
       	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
 	bestConfig = removeDuplicateInt(bestConfig)
 	// log.Print("migrator optimal config: ",bestConfig)
+	// fmt.Println("MAP",nameMap)
 	// _,bestConfig := algorithms.KnapsackDynamicWeight(capacity, items,)
 	
 	migrations := make([]migration.MigrationCmd, 0, len(bestConfig))

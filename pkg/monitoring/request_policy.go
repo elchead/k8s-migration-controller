@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"fmt"
 	"log"
 )
 
@@ -22,7 +23,7 @@ func NewSlopePolicyWithClusterAndTime(percent,predictionTime float64, cluster Cl
 
 
 func NewSlopePolicyWithCluster(percent float64, cluster Cluster, client Clienter) *SlopeRequester {
-	return &SlopeRequester{percent,cluster, client,10.}
+	return &SlopeRequester{percent,cluster, client,5.}
 }
 
 func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {
@@ -39,6 +40,7 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 		predictedPercent := t.Cluster.GetUsagePercent(predictedUsage)
 		freePercent := availablePercent - predictedPercent
 		if freePercent < t.ThresholdFreePercent {
+			fmt.Println("Requester predicts usage ",predictedUsage,"GB of node",node," currently free ", t.Cluster.getAvailableGb(availablePercent),"GB ", availablePercent, " %")
 			criticalNodes = append(criticalNodes, NodeFreeGbRequest{Node: node, Amount: getFreeGbAmount(t.ThresholdFreePercent,freePercent,t.Cluster)})
 		}
 	}
