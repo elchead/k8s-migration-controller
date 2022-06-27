@@ -8,6 +8,7 @@ import (
 type RequestPolicy interface {
 	GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest)
 	ValidateMigrationsTo(originalNode string, migratedMemory float64) string
+	SetThreshold(float64)
 }
 
 type SlopeRequester struct {
@@ -48,14 +49,22 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 }
 
 func (c SlopeRequester) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodes NodeFreeMemMap) string {
-	for node, freePercent := range nodes {
-		if node != originalNode {
-			freeGb := c.Cluster.getAvailableGb(freePercent)
-			newFreeGb := freeGb - podMemory
-			if c.Cluster.GetUsagePercent(newFreeGb) > c.ThresholdFreePercent {
-				return node
-			}
+	return getAvailableNodeWithLeastUsage(c.Cluster,c.ThresholdFreePercent, nodes, originalNode, podMemory)
+}
+
+func getAvailableNodeWithLeastUsage(c Cluster, thresholdFreePercent float64,nodes NodeFreeMemMap, originalNode string, podMemory float64) (string) {
+	leastUsage := c.NodeGb
+	leastNode := ""
+	for node, usage := range nodes {
+		if usage < leastUsage && node != originalNode {
+			leastNode = node
 		}
+	}
+	freePercent := nodes[leastNode]
+	freeGb := c.getAvailableGb(freePercent)
+	newFreeGb := freeGb - podMemory
+	if c.GetUsagePercent(newFreeGb) > thresholdFreePercent {
+		return leastNode
 	}
 	return ""
 }
@@ -63,6 +72,10 @@ func (c SlopeRequester) enoughSpaceAvailableOn(originalNode string, podMemory fl
 func (c SlopeRequester) ValidateMigrationsTo(originalNode string, migratedMemory float64) string {
 	nodes, _ := c.Client.GetFreeMemoryOfNodes()
 	return c.enoughSpaceAvailableOn(originalNode, migratedMemory, nodes)
+}
+
+func (c *SlopeRequester) SetThreshold(thresholdPercent float64) {
+	c.ThresholdFreePercent = thresholdPercent
 }
 
 type ThresholdPolicy struct {
@@ -92,6 +105,10 @@ type NodeFreeGbRequest struct {
 	Amount float64
 }
 
+func (c *ThresholdPolicy) SetThreshold(thresholdPercent float64) {
+	c.ThresholdFreePercent = thresholdPercent
+}
+
 func (t ThresholdPolicy) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {
 	nodes, _ := t.Client.GetFreeMemoryOfNodes()
 	for node, availablePercent := range nodes {
@@ -113,16 +130,7 @@ func getFreeGbAmount(thresholdPercent,availablePercent float64,cluster Cluster) 
 }
 
 func (c ThresholdPolicy) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodes NodeFreeMemMap) string {
-	for node, freePercent := range nodes {
-		if node != originalNode {
-			freeGb := c.Cluster.getAvailableGb(freePercent)
-			newFreeGb := freeGb - podMemory
-			if c.Cluster.GetUsagePercent(newFreeGb) > c.ThresholdFreePercent {
-				return node
-			}
-		}
-	}
-	return ""
+	return getAvailableNodeWithLeastUsage(c.Cluster,c.ThresholdFreePercent, nodes, originalNode, podMemory)
 }
 
 func (c ThresholdPolicy) ValidateMigrationsTo(originalNode string, migratedMemory float64) string {

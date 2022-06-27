@@ -23,6 +23,18 @@ func TestSlopeRequester(t *testing.T) {
 	})
 }
 
+func TestSelectNodeWithHighestAvailableMemory(t *testing.T) {
+	cluster := NewTestCluster()
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 50., "q_z1": 30.},monitoring.PodMemMap{"w_z3": 10., "q_z3": 5.})
+
+	t.Run("migrate to node with least usage", func(t *testing.T) {
+		sut := monitoring.NewSlopePolicyWithClusterAndTime(10.,5.,cluster, mockClient)
+		migratingNode := sut.ValidateMigrationsTo("z2",7.5)	
+		assert.Equal(t,"z3",migratingNode)
+
+	})	
+}
+
 func TestIsEnoughSpaceAvailable(t *testing.T) {
 	cluster := NewTestCluster()
 	t.Run("fail if other node would be full after migration", func(t *testing.T) {

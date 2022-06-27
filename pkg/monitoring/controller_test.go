@@ -16,7 +16,7 @@ var testCluster = NewTestCluster()
 
 func TestMigration(t *testing.T) {
 	t.Run("migrate max pod on critical node", func(t *testing.T) {
-		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 10.})
+		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 42., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 10.})
 		policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)
 		sut := monitoring.NewControllerWithPolicy(policy)
 		migs, err := sut.GetMigrations()
@@ -32,7 +32,7 @@ func TestMigration(t *testing.T) {
 		assert.Empty(t, migs)
 	})
 	t.Run("do not migrate if other node is full after migration", func(t *testing.T) {
-		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z1": 25, "q_z2": 30, "z3_t": 30}, monitoring.PodMemMap{"w_z2": 30, "q_z2": 30})
+		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z1": 27, "q_z2": 30, "z3_t": 30}, monitoring.PodMemMap{"w_z2": 30, "q_z2": 30})
 		policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)
 		sut := monitoring.NewControllerWithPolicy(policy)
 		migs, err := sut.GetMigrations()
