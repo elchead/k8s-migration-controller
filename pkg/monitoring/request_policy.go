@@ -48,25 +48,35 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 	return criticalNodes
 }
 
-func (c SlopeRequester) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodes NodeFreeMemMap) string {
-	return getAvailableNodeWithLeastUsage(c.Cluster,c.ThresholdFreePercent, nodes, originalNode, podMemory)
+func (c SlopeRequester) enoughSpaceAvailableOn(originalNode string, podMemory float64, nodeAvailablePercents NodeFreeMemMap) string {
+	return getAvailableNodeWithLeastUsage(c.Cluster,c.ThresholdFreePercent, nodeAvailablePercents, originalNode, podMemory)
 }
 
-func getAvailableNodeWithLeastUsage(c Cluster, thresholdFreePercent float64,nodes NodeFreeMemMap, originalNode string, podMemory float64) (string) {
-	leastUsage := c.NodeGb
-	leastNode := ""
-	for node, usage := range nodes {
-		if usage < leastUsage && node != originalNode {
-			leastNode = node
-		}
-	}
-	freePercent := nodes[leastNode]
-	freeGb := c.getAvailableGb(freePercent)
+func getAvailableNodeWithLeastUsage(c Cluster, thresholdFreePercent float64,nodeAvailablePercents NodeFreeMemMap, originalNode string, podMemory float64) (string) {
+	leastNode := getLeastUsedNode(nodeAvailablePercents, originalNode)
+	fmt.Println("Least used node ",leastNode)
+	availablePercent := nodeAvailablePercents[leastNode]
+	freeGb := c.getAvailableGb(availablePercent)
+	fmt.Println("Free GB on least node ",freeGb)
+
 	newFreeGb := freeGb - podMemory
 	if c.GetUsagePercent(newFreeGb) > thresholdFreePercent {
 		return leastNode
 	}
+	log.Println("No node available with enough space (free percentage of nodes):",nodeAvailablePercents)
 	return ""
+}
+
+func getLeastUsedNode(nodeAvailablePercents NodeFreeMemMap, originalNode string) string {
+	mostFreePercent := 0. // c.NodeGb
+	leastNode := ""
+	for node, availablePercent := range nodeAvailablePercents {
+		if availablePercent > mostFreePercent && node != originalNode {
+			mostFreePercent = availablePercent
+			leastNode = node
+		}
+	}
+	return leastNode
 }
 
 func (c SlopeRequester) ValidateMigrationsTo(originalNode string, migratedMemory float64) string {
