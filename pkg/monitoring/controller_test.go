@@ -20,6 +20,11 @@ func TestMigration(t *testing.T) {
 		policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)
 		sut := monitoring.NewControllerWithPolicy(policy)
 		migs, err := sut.GetMigrations()
+		t.Run("migrating node is set in cmd",func(t *testing.T){
+			for _,mig := range migs {
+				assert.Equal(t,"z1",mig.NewNode)
+			}
+		})
 		assert.NoError(t, err)
 		assert.Equal(t, "q_z2", migs[0].Pod)
 	})

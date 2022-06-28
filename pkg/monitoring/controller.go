@@ -51,8 +51,9 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 		migrationSize := sumPodMemories(cmds)
 		if migratingNode :=c.Requester.ValidateMigrationsTo(request.Node, migrationSize); migratingNode != "" {
 			log.Printf("migrator request fulfilled (%v Gb): %v\n",sumPodMemories(cmds), cmds)
-			// TODO use node name to migrate to that node
-			// for _, range cmds 
+			for i := range cmds {
+				cmds[i].NewNode = migratingNode
+			}
 			migrations = append(migrations, cmds...)
 		} else {
 			return migrations, &NodeFullError{request,cmds}

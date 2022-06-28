@@ -17,6 +17,7 @@ type Migration struct {
 type MigrationCmd struct {
 	Pod   string
 	Usage float64
+	NewNode string
 }
 
 func Migrate(migs []MigrationCmd, namespace string) {
