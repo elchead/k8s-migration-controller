@@ -27,10 +27,20 @@ type concurrentMigrationChecker struct {
 }
 func (m *concurrentMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
 	m.migrationStart[pod] = t
-	m.migrationFinish[pod] = m.getLastMigrationFinishTime(gbSize,t)
+	m.migrationFinish[pod] = m.updateLastMigrationFinishTime(gbSize,t)
 }
 
-func (m *concurrentMigrationChecker) getLastMigrationFinishTime(gbSize float64,now clock.Clock) clock.Clock {
+func (m concurrentMigrationChecker) GetMigratingJobs(now clock.Clock) []string { 
+	var res []string
+	for pod,finishTime := range m.migrationFinish {
+		if !finishTime.BeforeOrEqual(now) {
+			res = append(res,pod)
+		}
+	}
+	return res
+}
+
+func (m *concurrentMigrationChecker) updateLastMigrationFinishTime(gbSize float64,now clock.Clock) clock.Clock {
 	if m.latestFinish == nil {
 		m.latestFinish = &now
 	}
@@ -66,16 +76,16 @@ func NewMigrationChecker(checkerType string) MigrationCheckerI {
 	}
 }
 type blockingMigrationChecker struct {
-	adapter MigrationChecker
+	wrapper *concurrentMigrationChecker
 	migrationFinishTime []clock.Clock // TODO also for concurrent
 	migrationPods []string
 }
 
 func NewBlockingMigrationChecker() *blockingMigrationChecker {
-	return &blockingMigrationChecker{adapter:MigrationChecker{}}
+	return &blockingMigrationChecker{wrapper:NewConcurrentMigrationChecker()}
 }
 
-func (m *blockingMigrationChecker) GetMigratingJobs(t clock.Clock) []string {
+func (m *blockingMigrationChecker) GetMigratingJobs(t clock.Clock) []string { // TODO use concurrentMigrationChecker
 	var res []string
 	for idx,v := range m.migrationFinishTime {
 		if !v.BeforeOrEqual(t) {
@@ -87,40 +97,19 @@ func (m *blockingMigrationChecker) GetMigratingJobs(t clock.Clock) []string {
 }
 
 func (m *blockingMigrationChecker) StartMigration(t clock.Clock,gbSize float64,pod string) {
-	m.adapter.StartMigrationWithSize(t,gbSize)	
+	m.wrapper.StartMigration(t,gbSize,pod)
 }
 
 func (m *blockingMigrationChecker) GetMigrationFinishTime(pod string) clock.Clock {
-	return m.adapter.GetMigrationFinishTime()
+	return m.wrapper.GetMigrationFinishTime(pod)
 } 
 
-func (m *blockingMigrationChecker) IsReady(current clock.Clock) bool { return m.adapter.IsReady(current) }
+func (m *blockingMigrationChecker) IsReady(current clock.Clock) bool { if m.wrapper.latestFinish == nil  { return true } else { return m.wrapper.latestFinish.Add(BackoffInterval).BeforeOrEqual(current) } }
 
 
 type MigrationCheckerI interface {
 	StartMigration(t clock.Clock,gbSize float64,pod string)
 	GetMigrationFinishTime(pod string) clock.Clock
 	IsReady(current clock.Clock) bool
+	GetMigratingJobs(t clock.Clock) []string
 }
-
-
-type MigrationChecker struct {
-	migrationStart clock.Clock
-	migrationDuration time.Duration
-}
-
-func (m *MigrationChecker) StartMigration(t clock.Clock) {
-	m.migrationStart = t
-	m.migrationDuration = MigrationTime
-}
-
-func (m *MigrationChecker) StartMigrationWithSize(t clock.Clock,gbSize float64)  {
-	m.migrationStart = t
-	m.migrationDuration = GetMigrationTime(gbSize)
-}
-
-func (m *MigrationChecker) GetMigrationFinishTime() clock.Clock {
-	return m.migrationStart.Add(m.migrationDuration)
-}
-
-func (m *MigrationChecker) IsReady(current clock.Clock) bool { return m.GetMigrationFinishTime().Add(BackoffInterval).BeforeOrEqual(current) } 

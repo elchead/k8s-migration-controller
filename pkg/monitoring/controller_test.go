@@ -30,7 +30,6 @@ func TestControllerBlocksDuringMigration(t *testing.T) {
 		assert.Empty(t,migs)
 		assert.Error(t, err)
 	})
-		
 }
 
 func TestMigration(t *testing.T) {

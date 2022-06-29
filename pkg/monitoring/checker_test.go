@@ -12,10 +12,17 @@ import (
 var now = time.Now()
 var clockNow = clock.NewClock(now)
 
-func TestCheckerMigrationProcess(t *testing.T) {
-	sut := monitoring.MigrationChecker{}
+func TestBlockingChecker(t *testing.T) {
+	sut := monitoring.NewBlockingMigrationChecker()
 	t.Run("not ready during migration", func(t *testing.T){
-		sut.StartMigration(clockNow)
+		sut.StartMigration(clockNow,10.,"pod1")
+		assert.False(t,sut.IsReady(clockNow.Add(monitoring.BackoffInterval)))
+	})
+	t.Run("second migration starts after first finishes", func(t *testing.T){
+		finishTimePod1 := sut.GetMigrationFinishTime("pod1")
+		migrationTimePod1 := finishTimePod1.Sub(clockNow)
+		sut.StartMigration(clockNow,20.,"pod2")
+		assertTimeRoughlyEqual(t,finishTimePod1.Add(2*migrationTimePod1),sut.GetMigrationFinishTime("pod2"))
 		assert.False(t,sut.IsReady(clockNow.Add(monitoring.BackoffInterval)))
 	})
 	t.Run("not ready before backoff", func(t *testing.T){
