@@ -28,7 +28,7 @@ func TestMaxMigration(t *testing.T) {
 
 func TestBigEnoughMigration(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 30., "z2_r": 40.}, monitoring.PodMemMap{"ow_z1": 10.})
-	sut := monitoring.BigEnoughMigrator{cluster, mockClient}
+	sut := monitoring.NewMigrationPolicy("big-enough",cluster, mockClient)
 	t.Run("choose smallest pod that is big enough", func(t *testing.T) {
 		request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 26.}
 		cmds, err := sut.GetMigrationCmds(request)
@@ -45,7 +45,7 @@ func TestBigEnoughMigration(t *testing.T) {
 
 func TestKnapsackMigration(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 25., "or_z2": 40.}, monitoring.PodMemMap{"ow_z1": 10.})
-	sut := monitoring.OptimalMigrator{cluster, mockClient,0}
+	sut := monitoring.NewMigrationPolicy("optimal",cluster, mockClient)
 	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
 	cmds, err := sut.GetMigrationCmds(request)	
 	assert.NoError(t, err)
@@ -55,7 +55,7 @@ func TestKnapsackMigration(t *testing.T) {
 
 func TestDoNotMigrateSmallJob(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 25., "or_z2": 1.,"oy_z2":6.})
-	sut := monitoring.OptimalMigrator{cluster, mockClient,1.}
+	sut := monitoring.NewMigrationPolicy("optimal",cluster, mockClient)
 	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
 	cmds, err := sut.GetMigrationCmds(request)	
 	assert.NoError(t, err)
@@ -65,7 +65,7 @@ func TestDoNotMigrateSmallJob(t *testing.T) {
 
 func TestPunishMigratedJobInOptimalMigrator(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 16., "mr_z2": 33.,"ot_z2":17.}, monitoring.PodMemMap{"ow_z1": 10.})
-	sut := monitoring.OptimalMigrator{cluster, mockClient,0}
+	sut :=  monitoring.NewMigrationPolicy("optimal",cluster, mockClient)
 	request := monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.}
 	cmds, err := sut.GetMigrationCmds(request)	
 	assert.NoError(t, err)

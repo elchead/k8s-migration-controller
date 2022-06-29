@@ -1,19 +1,23 @@
 package monitoring
 
 import (
+	"errors"
 	"fmt"
 	"knapsack/algorithms"
 	"log"
 	"math"
+	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 
 
 func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) MigrationPolicy {
+	checker := NewBlockingMigrationChecker()
 	switch policy {
 	case "optimal":
-		return &OptimalMigrator{Client: client, Cluster: cluster,MinSize:5.}
+		return &OptimalMigrator{Client: client, Cluster: cluster,MinSize:5.,Checker:checker}
 	case "max":
 		return &MaxMigrator{Cluster: cluster, Client: client}
 	case "big-enough":
@@ -26,6 +30,7 @@ func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) Migratio
 
 type MigrationPolicy interface {
 	GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
+	StartMigration(migration.MigrationCmd)
 }
 
 
@@ -33,6 +38,7 @@ type OptimalMigrator struct {
 	Cluster Cluster
 	Client  Clienter
 	MinSize float64
+	Checker MigrationCheckerI
 }
 
 func removeDuplicateInt(intSlice []int) []int {
@@ -47,8 +53,16 @@ func removeDuplicateInt(intSlice []int) []int {
 	return list
     }
     
+func (m OptimalMigrator) StartMigration(cmd migration.MigrationCmd) {
+	now := clock.NewClock(time.Now()) // TODO 
+	m.Checker.StartMigration(now,cmd.Usage,cmd.Pod)
+}
 
 func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	now := clock.NewClock(time.Now()) // TODO use pseudo time in controller (sync with sim time?)
+	if !m.Checker.IsReady(now) {
+		return nil, errors.New("checker not ready")
+	}
 	podMems, err := m.Client.GetPodMemories(request.Node)
 	if err != nil {
 		return nil, err
@@ -59,6 +73,9 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	capacity := int(request.Amount)
       	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
 	bestConfig = removeDuplicateInt(bestConfig)
+	if len(bestConfig) == 0 {
+		return nil, errors.New("no migration pod found. Is smallest pod bigger than requested amount?")
+	}
 	// log.Print("migrator optimal config: ",bestConfig)
 	// fmt.Println("MAP",nameMap)
 	// _,bestConfig := algorithms.KnapsackDynamicWeight(capacity, items,)
@@ -100,6 +117,9 @@ type MaxMigrator struct {
 	Client  Clienter
 }
 
+func (m MaxMigrator) StartMigration(cmd migration.MigrationCmd) {
+}
+
 func (c MaxMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
 	podMems, err := c.Client.GetPodMemories(request.Node)
 	if err != nil {
@@ -117,6 +137,10 @@ type BigEnoughMigrator struct {
 	Cluster Cluster
 	Client  Clienter
 }
+
+func (m BigEnoughMigrator) StartMigration(cmd migration.MigrationCmd) {
+}
+
 
 func (c BigEnoughMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
 	podMems, err := c.Client.GetPodMemories(request.Node)

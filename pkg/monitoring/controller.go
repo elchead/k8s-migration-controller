@@ -58,6 +58,10 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 		} else {
 			return migrations, &NodeFullError{request,cmds}
 		}
+
+		for _,cmd := range cmds {
+			c.Migrator.StartMigration(cmd)
+		}
 	}
 	return migrations, nil
 }

@@ -14,6 +14,25 @@ const testNodeGb = 100.
 
 var testCluster = NewTestCluster()
 
+func TestControllerBlocksDuringMigration(t *testing.T) {
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 30., "q_z2": 50.,"z_z2": 20.}, monitoring.PodMemMap{"w_z1": 10.})
+	policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)
+	sut := monitoring.NewController(policy,monitoring.NewMigrationPolicy("optimal",testCluster,mockClient)) // TODO test for other mig policies as well
+	
+	t.Run("starts migration", func(t *testing.T) {
+		migs, err := sut.GetMigrations()
+		assert.NotEmpty(t,migs)
+		assert.NoError(t, err)
+	})
+
+	t.Run("blocks after starting migration", func(t *testing.T) {
+		migs, err := sut.GetMigrations()	
+		assert.Empty(t,migs)
+		assert.Error(t, err)
+	})
+		
+}
+
 func TestMigration(t *testing.T) {
 	t.Run("migrate max pod on critical node", func(t *testing.T) {
 		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 42., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 10.})
