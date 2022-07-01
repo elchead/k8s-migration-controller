@@ -3,7 +3,6 @@ package monitoring
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
@@ -11,22 +10,21 @@ import (
 )
 
 type ControllerI interface {
-	GetMigrations() (migrations []migration.MigrationCmd, err error)
-	GetMigrationsWithTime(t clock.Clock) (migrations []migration.MigrationCmd, err error)
+	GetMigrations(t clock.Clock) (migrations []migration.MigrationCmd, err error)
 }
 
 type Controller struct {
 	Requester RequestPolicy
-	Migrator  MigrationPolicy
+	Migrator  MigrationPolicyNew
 	MinRequestSize float64
 }
 
 // TODO remove
 func NewControllerWithPolicy(policy *ThresholdPolicy) *Controller {
-	return NewController(policy,&MaxMigrator{policy.Cluster, policy.Client})
+	return NewController(policy,  NewMigrationPolicy("max", policy.Cluster,policy.Client))
 }
 
-func NewController(requester RequestPolicy, migrater MigrationPolicy) *Controller {
+func NewController(requester RequestPolicy, migrater MigrationPolicyNew) *Controller {
 	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:7.}
 }
 
@@ -39,7 +37,7 @@ func (m *NodeFullError) Error() string {
 	return fmt.Sprintf("Migration of pods: %v failed because nodes are full. no place to fullfill request %v",m.Migrations,m.Request)
 }
 
-func (c Controller) GetMigrationsWithTime(t clock.Clock) (migrations []migration.MigrationCmd, err error) {
+func (c Controller) GetMigrations(t clock.Clock) (migrations []migration.MigrationCmd, err error) {
 	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
 	for _, request := range nodeFreeRequests {
 		if request.Amount < c.MinRequestSize {
@@ -47,7 +45,7 @@ func (c Controller) GetMigrationsWithTime(t clock.Clock) (migrations []migration
 			return nil, nil
 		}		
 		log.Printf("migrator requesting: %v\n", request)
-		cmds, err := c.Migrator.(*OptimalMigrator).GetMigrationCmdsWithTime(t,request) //
+		cmds, err := c.Migrator.GetMigrationCmds(t,request)
 		if err != nil {
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
@@ -62,42 +60,14 @@ func (c Controller) GetMigrationsWithTime(t clock.Clock) (migrations []migration
 			return migrations, &NodeFullError{request,cmds}
 		}
 
-		for _,cmd := range cmds {
-			c.Migrator.StartMigration(cmd,t)
+		for i,_ := range migrations {
+			c.Migrator.StartMigration(&migrations[i],t)
+
 		}
 	}
 	return migrations, nil
 }
 
-func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err error) {
-	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
-	for _, request := range nodeFreeRequests {
-		if request.Amount < c.MinRequestSize {
-			log.Printf("migrator request too small, ignoring %v", request.Amount)
-			return nil, nil
-		}		
-		log.Printf("migrator requesting: %v\n", request)
-		cmds, err := c.Migrator.GetMigrationCmds(request)
-		if err != nil {
-			return nil,errors.Wrap(err, "problem during migration request")
-		}
-		migrationSize := sumPodMemories(cmds)
-		if migratingNode :=c.Requester.ValidateMigrationsTo(request.Node, migrationSize); migratingNode != "" {
-			log.Printf("migrator request fulfilled (%v Gb): %v\n",sumPodMemories(cmds), cmds)
-			for i := range cmds {
-				cmds[i].NewNode = migratingNode
-			}
-			migrations = append(migrations, cmds...)
-		} else {
-			return migrations, &NodeFullError{request,cmds}
-		}
-
-		for _,cmd := range cmds {
-			c.Migrator.StartMigration(cmd,clock.NewClock(time.Now()))
-		}
-	}
-	return migrations, nil
-}
 
 func sumPodMemories(cmds []migration.MigrationCmd) float64 {
 	memSum := 0.

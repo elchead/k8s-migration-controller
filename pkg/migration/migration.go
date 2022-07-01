@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 )
 
 const kubeconfig = "/home/adrian/config"
@@ -18,6 +20,7 @@ type MigrationCmd struct {
 	Pod   string
 	Usage float64
 	NewNode string
+	FinishAt clock.Clock
 }
 
 func Migrate(migs []MigrationCmd, namespace string) {

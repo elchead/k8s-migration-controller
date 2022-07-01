@@ -104,7 +104,14 @@ func (m *blockingMigrationChecker) GetMigrationFinishTime(pod string) clock.Cloc
 	return m.wrapper.GetMigrationFinishTime(pod)
 } 
 
-func (m *blockingMigrationChecker) IsReady(current clock.Clock) bool { if m.wrapper.latestFinish == nil  { return true } else { return m.wrapper.latestFinish.Add(BackoffInterval).BeforeOrEqual(current) } }
+func (m *blockingMigrationChecker) IsReady(current clock.Clock) bool { 
+ 	if m.wrapper.latestFinish == nil  { 
+		return true 
+	} else { 
+		return m.wrapper.latestFinish.Add(BackoffInterval).BeforeOrEqual(current)
+	}
+}
+
 
 
 type MigrationCheckerI interface {
