@@ -61,6 +61,7 @@ func (c FilteredClient) GetPodMemories(node string) (PodMemMap, error) {
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("ignoring jobs",c.jobsToIgnore)
 	filtered := filterPods(res, c.jobsToIgnore)
 	return filtered, nil
 }
@@ -75,7 +76,7 @@ func (m MigratorAdapter) GetMigrationCmds(now clock.Clock,request NodeFreeGbRequ
 	if !m.Checker.IsReady(now) {
 		return nil, errors.New("checker not ready")
 	}
-	jobsToIgnore := m.Checker.GetMigratingJobs(now) // TODO
+	jobsToIgnore := m.Checker.GetMigratingJobs(now)
 	m.ClientRef.UpdateJobsToIgnore(jobsToIgnore)
 	res,err := m.MigrationPolicy.GetMigrationCmds(request)
 	return res,err

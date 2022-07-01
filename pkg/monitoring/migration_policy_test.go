@@ -12,6 +12,7 @@ import (
 
 var cluster = NewTestCluster()
 
+
 func TestMigratorBlocksWhenMigInProgress(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 40., "oq_z2": 45.}, monitoring.PodMemMap{"ow_z1": 10.})
 	sut := monitoring.NewMigrationPolicy("optimal",cluster, mockClient)
@@ -41,7 +42,7 @@ func TestConcurrentIgnoresMigratingJobs(t *testing.T){
 	now := clock.NewClock(time.Now())
 	
 	checker := monitoring.NewConcurrentMigrationChecker()
-	sut := monitoring.NewMigrationPolicyWithChecker("optimal",cluster, mockClient,checker) //&monitoring.OptimalMigrator{Client: mockClient, Cluster: cluster,MinSize:5.,Checker:checker}	
+	sut := monitoring.NewMigrationPolicyWithChecker("optimal",cluster, mockClient,checker)
 
 	t.Run("ignores single job",func(t *testing.T) {
 		sut.StartMigration(&migration.MigrationCmd{Pod: "oq_z2", Usage: 20.},now)
