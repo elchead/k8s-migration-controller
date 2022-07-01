@@ -3,7 +3,10 @@ package monitoring_test
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -14,6 +17,40 @@ const testNodeGb = 100.
 
 var testCluster = NewTestCluster()
 
+func TestControllerRestrictsChoiceForConcurrentChecker(t *testing.T){
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 30., "q_z2": 50.,"z_z2": 20.,}, monitoring.PodMemMap{"w_z1": 10.})
+	policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)
+	checker := monitoring.NewConcurrentMigrationChecker()
+	
+	migrator := &monitoring.OptimalMigrator{Client: mockClient, Cluster: cluster,MinSize:5.,Checker:checker}	
+	now := clock.NewClock(time.Now())
+	sut := monitoring.NewController(policy,migrator)
+
+	t.Run("starts migration", func(t *testing.T){
+		migs,err := sut.GetMigrationsWithTime(now)
+		assert.NoError(t, err)
+		assert.Equal(t,[]migration.MigrationCmd{{"z_z2" ,20 ,"z1"}},migs)	
+	})
+	t.Run("does not repeat same migration", func(t *testing.T){
+		migs,err := sut.GetMigrationsWithTime(now)
+		assert.Error(t, err)  // TODO is error desired? check if catched... It's normal.. there is no option, ignore
+		assert.Empty(t, migs)
+	})
+	t.Run("migrate new pod while still ignoring migrating pod", func(t *testing.T){
+		mockClientWithNewPod := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 30., "q_z2": 40.,"z_z2": 20.,"n_z2": 8.}, monitoring.PodMemMap{"w_z1": 10.})
+		migrator.Client =  mockClientWithNewPod
+		migs,err := sut.GetMigrationsWithTime(now)
+		assert.NoError(t, err)
+		assert.Equal(t,[]migration.MigrationCmd{{"n_z2" ,8 ,"z1"}},migs) // TODO is error desired? check if catched
+	})
+	t.Run("(hypothetical): allow to migrate old pod when finished migrating pod", func(t *testing.T){
+		mockClientWithNewPod := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 30., "q_z2": 40.,"z_z2": 20.,"n_z2": 8.}, monitoring.PodMemMap{"w_z1": 10.})
+		migrator.Client =  mockClientWithNewPod
+		migs,err := sut.GetMigrationsWithTime(now.Add(1*time.Hour))
+		assert.NoError(t, err)
+		assert.Equal(t,[]migration.MigrationCmd{{"z_z2" ,20 ,"z1"}},migs)
+	})
+}
 func TestControllerBlocksDuringMigration(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 30., "q_z2": 50.,"z_z2": 20.}, monitoring.PodMemMap{"w_z1": 10.})
 	policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, mockClient)

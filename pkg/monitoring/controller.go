@@ -3,13 +3,16 @@ package monitoring
 import (
 	"fmt"
 	"log"
+	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/pkg/errors"
 )
 
 type ControllerI interface {
 	GetMigrations() (migrations []migration.MigrationCmd, err error)
+	GetMigrationsWithTime(t clock.Clock) (migrations []migration.MigrationCmd, err error)
 }
 
 type Controller struct {
@@ -36,6 +39,36 @@ func (m *NodeFullError) Error() string {
 	return fmt.Sprintf("Migration of pods: %v failed because nodes are full. no place to fullfill request %v",m.Migrations,m.Request)
 }
 
+func (c Controller) GetMigrationsWithTime(t clock.Clock) (migrations []migration.MigrationCmd, err error) {
+	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
+	for _, request := range nodeFreeRequests {
+		if request.Amount < c.MinRequestSize {
+			log.Printf("migrator request too small, ignoring %v", request.Amount)
+			return nil, nil
+		}		
+		log.Printf("migrator requesting: %v\n", request)
+		cmds, err := c.Migrator.(*OptimalMigrator).GetMigrationCmdsWithTime(t,request) //
+		if err != nil {
+			return nil,errors.Wrap(err, "problem during migration request")
+		}
+		migrationSize := sumPodMemories(cmds)
+		if migratingNode :=c.Requester.ValidateMigrationsTo(request.Node, migrationSize); migratingNode != "" {
+			log.Printf("migrator request fulfilled (%v Gb): %v\n",sumPodMemories(cmds), cmds)
+			for i := range cmds {
+				cmds[i].NewNode = migratingNode
+			}
+			migrations = append(migrations, cmds...)
+		} else {
+			return migrations, &NodeFullError{request,cmds}
+		}
+
+		for _,cmd := range cmds {
+			c.Migrator.StartMigration(cmd,t)
+		}
+	}
+	return migrations, nil
+}
+
 func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err error) {
 	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
 	for _, request := range nodeFreeRequests {
@@ -60,7 +93,7 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 		}
 
 		for _,cmd := range cmds {
-			c.Migrator.StartMigration(cmd)
+			c.Migrator.StartMigration(cmd,clock.NewClock(time.Now()))
 		}
 	}
 	return migrations, nil

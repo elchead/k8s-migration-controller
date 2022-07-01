@@ -30,9 +30,50 @@ func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) Migratio
 
 type MigrationPolicy interface {
 	GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
-	StartMigration(migration.MigrationCmd)
+	// GetMigrationCmdsWithTime(now clock.Clock, request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
+	StartMigration(migration.MigrationCmd,clock.Clock)
 }
 
+type MigrationPolicyNew interface {
+	// GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
+	GetMigrationCmdsWithTime(now clock.Clock, request NodeFreeGbRequest) ([]migration.MigrationCmd, error)
+	StartMigration(migration.MigrationCmd,clock.Clock)
+}
+
+type MigratorAdapter struct {
+	MigrationPolicy
+	Checker MigrationCheckerI
+}
+
+// type
+
+func (m MigratorAdapter) GetMigrationCmdsWithTime(now clock.Clock,request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	if !m.Checker.IsReady(now) {
+		return nil, errors.New("checker not ready")
+	}
+	// jobsToIgnore := m.Checker.GetMigratingJobs(now) // TODO
+	return m.MigrationPolicy.GetMigrationCmds(request)
+// filtered := filterPods(podMems, jobsToIgnore)
+}
+
+func filterPods(podMems PodMemMap, jobsToIgnore []string) ( PodMemMap) {
+	filteredPodMems := PodMemMap{}
+	for job, amount := range podMems {
+		if !contains(jobsToIgnore, job) {
+			filteredPodMems[job] = amount
+		}
+	}
+	return filteredPodMems
+}
+
+func (m MigratorAdapter) StartMigration(cmd migration.MigrationCmd,now clock.Clock) {
+	m.Checker.StartMigration(now,cmd.Usage,cmd.Pod)
+}
+
+func (m OptimalMigrator) StartMigration(cmd migration.MigrationCmd,now clock.Clock) {
+	// now := clock.NewClock(time.Now()) // TODO 
+	m.Checker.StartMigration(now,cmd.Usage,cmd.Pod)
+}
 
 type OptimalMigrator struct {
 	Cluster Cluster
@@ -53,10 +94,7 @@ func removeDuplicateInt(intSlice []int) []int {
 	return list
     }
     
-func (m OptimalMigrator) StartMigration(cmd migration.MigrationCmd) {
-	now := clock.NewClock(time.Now()) // TODO 
-	m.Checker.StartMigration(now,cmd.Usage,cmd.Pod)
-}
+
 
 func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
 	now := clock.NewClock(time.Now()) // TODO use pseudo time in controller (sync with sim time?)
@@ -67,6 +105,7 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 	if err != nil {
 		return nil, err
 	}
+	m.Checker.GetMigratingJobs(now)
 	items, nameMap := createItemsAndNameMap(podMems,m.MinSize)
 
 	// fmt.Printf("ITEMS: %+v\n",items)
@@ -86,6 +125,47 @@ func (m OptimalMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migratio
 		migrations = append(migrations, migration.MigrationCmd{Pod: pod, Usage: podMems[pod]})
 	}
 	return migrations, nil
+}
+
+func (m OptimalMigrator) GetMigrationCmdsWithTime(now clock.Clock,request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
+	if !m.Checker.IsReady(now) {
+		return nil, errors.New("checker not ready")
+	}
+	podMems, err := m.Client.GetPodMemories(request.Node)
+	if err != nil {
+		return nil, err
+	}
+	ignoreJobs := m.Checker.GetMigratingJobs(now)
+	filteredPodMems := filterPods(podMems, ignoreJobs)
+	items, nameMap := createItemsAndNameMap(filteredPodMems,m.MinSize)
+
+	// fmt.Printf("ITEMS: %+v\n",items)
+	capacity := int(request.Amount)
+      	_,_,bestConfig := algorithms.KnapsackBruteForce(capacity, items, []int{}, 0, 0, 0.)
+	bestConfig = removeDuplicateInt(bestConfig)
+	if len(bestConfig) == 0 {
+		return nil, errors.New("no migration pod found. Is smallest pod bigger than requested amount?")
+	}
+	// log.Print("migrator optimal config: ",bestConfig)
+	// fmt.Println("MAP",nameMap)
+	// _,bestConfig := algorithms.KnapsackDynamicWeight(capacity, items,)
+	
+	migrations := make([]migration.MigrationCmd, 0, len(bestConfig))
+	for _, idx := range bestConfig {
+		pod := nameMap[idx] 
+		migrations = append(migrations, migration.MigrationCmd{Pod: pod, Usage: podMems[pod]})
+	}
+	return migrations, nil
+}
+
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }
 
 func createItemsAndNameMap(podMems PodMemMap,minSize float64) ([]algorithms.FItem, map[int]string) {
@@ -117,7 +197,7 @@ type MaxMigrator struct {
 	Client  Clienter
 }
 
-func (m MaxMigrator) StartMigration(cmd migration.MigrationCmd) {
+func (m MaxMigrator) StartMigration(cmd migration.MigrationCmd,now clock.Clock) {
 }
 
 func (c MaxMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
@@ -138,7 +218,7 @@ type BigEnoughMigrator struct {
 	Client  Clienter
 }
 
-func (m BigEnoughMigrator) StartMigration(cmd migration.MigrationCmd) {
+func (m BigEnoughMigrator) StartMigration(cmd migration.MigrationCmd,now clock.Clock) {
 }
 
 

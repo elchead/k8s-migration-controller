@@ -2,13 +2,61 @@ package monitoring_test
 
 import (
 	"testing"
+	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 )
 
 var cluster = NewTestCluster()
+
+func TestMigratorBlocksWhenMigInProgress(t *testing.T) {
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 40., "oq_z2": 45.}, monitoring.PodMemMap{"ow_z1": 10.})
+	sut := monitoring.NewMigrationPolicy("optimal",cluster, mockClient).(*monitoring.OptimalMigrator)
+	now := clock.NewClock(time.Now())
+	t.Run("no error before migration start",func(t *testing.T){
+		cmds,err :=sut.GetMigrationCmdsWithTime(now,monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
+		assert.NoError(t, err)
+		assert.NotEmpty(t,cmds)
+	})
+
+	t.Run("throws error after migration start",func(t *testing.T){
+		sut.StartMigration(migration.MigrationCmd{Pod: "ow_z2", Usage: 20.},now)
+		cmds,err :=sut.GetMigrationCmdsWithTime(now,monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
+		assert.Error(t, err)
+		assert.Empty(t,cmds)
+	})
+	t.Run("no error after migration",func(t *testing.T){
+		sut.StartMigration(migration.MigrationCmd{Pod: "ow_z2", Usage: 20.},now)
+		cmds,err :=sut.GetMigrationCmdsWithTime(now.Add(1*time.Hour),monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
+		assert.NoError(t, err)
+		assert.NotEmpty(t,cmds)	
+	})
+}
+
+func TestConcurrentIgnoresMigratingJobs(t *testing.T){
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 40., "oq_z2": 45., "oy_z2": 6.}, monitoring.PodMemMap{"ow_z1": 10.})
+	checker := monitoring.NewConcurrentMigrationChecker()
+	now := clock.NewClock(time.Now())
+
+	sut := &monitoring.OptimalMigrator{Client: mockClient, Cluster: cluster,MinSize:5.,Checker:checker}	
+
+	t.Run("ignores single job",func(t *testing.T) {
+		sut.StartMigration(migration.MigrationCmd{Pod: "oq_z2", Usage: 20.},now)
+		cmds,err :=sut.GetMigrationCmdsWithTime(now,monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []migration.MigrationCmd{{"ow_z2",40.,""},{"oy_z2" ,6,""} },cmds)
+	})
+	t.Run("furthermore ignores second job",func(t *testing.T){
+		sut.StartMigration(migration.MigrationCmd{Pod: "ow_z2", Usage: 20.},now)
+		cmds,err :=sut.GetMigrationCmdsWithTime(now,monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
+		assert.NoError(t, err)
+		assert.Equal(t, []migration.MigrationCmd{{"oy_z2" ,6,""} },cmds)
+	})
+}
+
 
 func TestMaxMigration(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 40., "oq_z2": 45.}, monitoring.PodMemMap{"ow_z1": 10.})
