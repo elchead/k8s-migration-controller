@@ -11,11 +11,16 @@ type SlopeMigrator struct {
 	Cluster Cluster
 	Client  Clienter
 	TimeAhead float64 // in min
-	Buffer float64 // in Gb
 }
 
 
+
 func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations []migration.MigrationCmd, err error) {
+
+	nodeMem, _:= m.Client.GetFreeMemoryNode(request.Node)
+	buffer := m.Cluster.getAvailableGb(nodeMem)
+
+
 	podmems,err := m.Client.GetPodMemories(request.Node)
 
 	predictedUsage := 0.
@@ -38,7 +43,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 		}
 	}
 	heap.Init(&pq)
-	for predictedUsage > m.Buffer {
+	for predictedUsage > buffer {
 		item := heap.Pop(&pq).(*Item)
 		predictedUsage -= item.priority * m.TimeAhead
 		log.L.Info("Migrating pod: ",item.name,", slope: ",item.priority)
