@@ -3,10 +3,21 @@ package monitoring_test
 import (
 	"testing"
 
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+// TODO slope requester?
+func TestThresholdRequesterValidatesAsMuchAsPossible(t *testing.T){
+	cluster := NewTestCluster()
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 60., "q_z2": 40.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 30.})
+	sut := monitoring.NewThresholdPolicyWithCluster(10., cluster, mockClient)
+	cmds := []migration.MigrationCmd{{Pod:"w_z2",Usage:60.},{Pod:"q_z2",Usage:40}} // are they always sorted?? if not enough space skip, and try next
+	newcmds := sut.ValidateCmds("z2",cmds)
+	assert.Equal(t,[]migration.MigrationCmd{{Pod:"q_z2",Usage:40,NewNode:"z1"}},newcmds)	
+}
 
 func TestSlopeRequester(t *testing.T) {
 	cluster := NewTestCluster()

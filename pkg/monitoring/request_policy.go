@@ -3,6 +3,8 @@ package monitoring
 import (
 	"fmt"
 	"log"
+
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 
 type RequestPolicy interface {
@@ -94,6 +96,25 @@ type ThresholdPolicy struct {
 	Client               Clienter
 }
 
+func (c *ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.MigrationCmd) (validCmds []migration.MigrationCmd) {
+	nodeAvailablePercents,_ := c.Client.GetFreeMemoryOfNodes()
+	leastNode := getLeastUsedNode(nodeAvailablePercents, fromNode)
+	availablePercent := nodeAvailablePercents[leastNode]
+	freeGb := c.Cluster.getAvailableGb(availablePercent)
+	for _, cmd := range cmds {
+		newFreeGb := freeGb - cmd.Usage
+		if newFreePercent :=c.Cluster.GetUsagePercent(newFreeGb); newFreePercent < c.ThresholdFreePercent + 5. { // TODO set parameter?
+			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because ", c.Cluster.GetUsagePercent(newFreeGb)  ," would exceed threshold")
+			continue
+		} else {
+			cmd.NewNode = leastNode
+			validCmds = append(validCmds, cmd)
+			freeGb = newFreeGb
+		}
+	}
+	return
+}
+
 func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold float64) RequestPolicy {
 	switch policy {
 	case "slope":
@@ -106,8 +127,8 @@ func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold f
 	}
 }
 
-func NewThresholdPolicyWithCluster(percent float64, cluster Cluster, client Clienter) *ThresholdPolicy {
-	return &ThresholdPolicy{percent, cluster, client}
+func NewThresholdPolicyWithCluster(freePercent float64, cluster Cluster, client Clienter) *ThresholdPolicy {
+	return &ThresholdPolicy{freePercent, cluster, client}
 }
 
 type NodeFreeGbRequest struct {

@@ -48,16 +48,11 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 		if err != nil {
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
-		migrationSize := sumPodMemories(cmds)
-		if migratingNode :=c.Requester.ValidateMigrationsTo(request.Node, migrationSize); migratingNode != "" {
-			log.Printf("migrator request fulfilled (%v Gb): %v\n",sumPodMemories(cmds), cmds)
-			for i := range cmds {
-				cmds[i].NewNode = migratingNode
-			}
-			migrations = append(migrations, cmds...)
-		} else {
-			return migrations, &NodeFullError{request,cmds}
+		validatedCmds := c.Requester.(*ThresholdPolicy).ValidateCmds(request.Node,cmds)
+		if len(validatedCmds) == 0 && len(cmds) > 0 {
+			return migrations, &NodeFullError{request,cmds} 
 		}
+		migrations = append(migrations, validatedCmds...)
 	}
 	return migrations, nil
 }
