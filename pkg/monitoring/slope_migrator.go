@@ -27,25 +27,28 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 
 	pq := make(PriorityQueue, len(podmems))
 	i := 0
-	for name,_:= range podmems {
+	for name := range podmems {
 		slope, err := m.Client.GetPodMemorySlope(request.Node,name,"","")
-		
-		pq[i] = &Item{
-			Name: name,
-			Priority: slope,
-			Index:    i,
-		}
-		i++
-		
-		predictedUsage += slope * m.TimeAhead
 		if err != nil {
 			log.L.Info("Error getting slope for pod: ",name)
+			continue
+		}
+		if slope > 0. {
+			pq[i] = &Item{
+				Name: name,
+				Priority: slope,
+				Index:    i,
+			}
+			i++
+			
+			predictedUsage += slope * m.TimeAhead
 		}
 	}
 	heap.Init(&pq)
+	originalPredictedUsage := predictedUsage
 	for predictedUsage > buffer  {
-		if len(migrations) == len(podmems) { // cannot migrat
-			log.L.Info("cannot free up buffer by migrating all pods")
+		if len(migrations) == len(podmems) {
+			log.L.Infof("cannot free up buffer (%.1f) by migrating all pods (predicted usage: %.1f)", buffer,originalPredictedUsage)
 			return migrations, nil
 		}
 		item := heap.Pop(&pq).(*Item)
