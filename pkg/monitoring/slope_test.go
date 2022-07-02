@@ -53,18 +53,24 @@ func TestSlopeMigrator(t *testing.T) {
 
 func TestPriorityQueue(t *testing.T) {
 	pq := make(monitoring.PriorityQueue, 0)
-	heap.Init(&pq)
-
+	
 	first := &monitoring.Item{
 		Name: "first",
 		Priority: 1,
 		Index:    1,
 	}
-	pq.Push(first)
+	heap.Push(&pq,first)
+	second := &monitoring.Item{
+		Name: "first",
+		Priority: 3,
+		Index:    1,
+	}
+	heap.Push(&pq,second)
+	heap.Init(&pq)
 
 
-	assert.Equal(t,first,heap.Pop(&pq).(*monitoring.Item))
-	assert.Nil(t,heap.Pop(&pq))
+	assert.Equal(t,second,heap.Pop(&pq).(*monitoring.Item))
+	// assert.Nil(t,heap.Pop(&pq))
 }
 
 func assertMigration(t testing.TB,res []migration.MigrationCmd,podName... string) {
