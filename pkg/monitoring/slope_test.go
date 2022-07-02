@@ -1,6 +1,8 @@
 package monitoring_test
 
 import (
+	"container/heap"
+
 	"testing"
 
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
@@ -47,6 +49,22 @@ func TestSlopeMigrator(t *testing.T) {
 		res,_ := sut.GetMigrationCmds(monitoring.NodeFreeGbRequest{Node:"z2"})
 		assertMigration(t,res,"z_z2","w_z2","z_z2")
 	})
+}
+
+func TestPriorityQueue(t *testing.T) {
+	pq := make(monitoring.PriorityQueue, 0)
+	heap.Init(&pq)
+
+	first := &monitoring.Item{
+		Name: "first",
+		Priority: 1,
+		Index:    1,
+	}
+	pq.Push(first)
+
+
+	assert.Equal(t,first,heap.Pop(&pq).(*monitoring.Item))
+	assert.Nil(t,heap.Pop(&pq))
 }
 
 func assertMigration(t testing.TB,res []migration.MigrationCmd,podName... string) {

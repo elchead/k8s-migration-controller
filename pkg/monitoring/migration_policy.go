@@ -12,6 +12,8 @@ import (
 
 func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) MigrationPolicy {
 	switch policy {
+	case "slope":
+		return &SlopeMigrator{Cluster:cluster, Client:client,TimeAhead:5.} // TODO configure timeahead
 	case "optimal":
 		return &OptimalMigrator{Client: client, Cluster: cluster,MinSize:5.}
 	case "max":
@@ -19,8 +21,8 @@ func NewMigrationPolicy(policy string, cluster Cluster,client Clienter) Migratio
 	case "big-enough":
 		return &BigEnoughMigrator{Cluster: cluster, Client: client}
 	default:
-		log.Println("Defaulting to optimal migration policy. Unknown policy: ",policy)
-		return &OptimalMigrator{Cluster: cluster, Client: client,MinSize:5.}
+		log.Fatal("Unknown migration policy: ",policy)
+		return nil
 	}
 }
 
