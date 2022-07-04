@@ -119,10 +119,10 @@ func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold f
 	switch policy {
 	case "slope":
 		return NewSlopePolicyWithCluster(threshold, cluster, client)
-	case "thresold":
+	case "threshold":
 		return NewThresholdPolicyWithCluster(threshold,cluster,client)
 	default:
-		log.Println("Defaulting to threshold request policy. Unknown policy: ",policy)
+		log.Fatal("Unknown request policy: (slope,threshold?) ",policy)
 		return NewThresholdPolicyWithCluster(threshold,cluster,client)
 	}
 }
