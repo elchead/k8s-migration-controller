@@ -48,7 +48,7 @@ func (c Controller) GetMigrations() (migrations []migration.MigrationCmd, err er
 		if err != nil {
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
-		validatedCmds := c.Requester.(*ThresholdPolicy).ValidateCmds(request.Node,cmds)
+		validatedCmds := c.Requester.ValidateCmds(request.Node,cmds)
 		if len(validatedCmds) == 0 && len(cmds) > 0 {
 			return migrations, &NodeFullError{request,cmds} 
 		}
