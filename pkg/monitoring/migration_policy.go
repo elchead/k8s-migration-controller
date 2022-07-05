@@ -21,6 +21,8 @@ func NewMigrationPolicyWithChecker(policy string, cluster Cluster,client Cliente
 	client = NewFilteredClient(client)
 	var migrator MigrationPolicy
 	switch policy {
+	case "slope":
+		migrator = &SlopeMigrator{Cluster:cluster, Client:client,TimeAhead:5.} // TODO configure timeahead
 	case "optimal":
 		migrator = &OptimalMigrator{Client: client, Cluster: cluster,MinSize:5.,Checker:checker}
 	case "max":
@@ -29,7 +31,7 @@ func NewMigrationPolicyWithChecker(policy string, cluster Cluster,client Cliente
 		migrator = &BigEnoughMigrator{Cluster: cluster, Client: client}
 	default:
 		log.Fatal("Unknown migration policy: ",policy)
-		migrator = &OptimalMigrator{Cluster: cluster, Client: client,MinSize:5.}
+		return nil
 	}
 	return MigratorAdapter{MigrationPolicy: migrator, Checker: checker,ClientRef: client.(*FilteredClient)}
 }

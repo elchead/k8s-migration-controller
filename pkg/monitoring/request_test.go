@@ -3,10 +3,31 @@ package monitoring_test
 import (
 	"testing"
 
+	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestThresholdRequesterValidatesAsMuchAsPossible(t *testing.T){
+	cluster := NewTestCluster()
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 60., "q_z2": 40.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 30.},monitoring.PodMemMap{"w_z3": 30., "q_z3": 5.})
+	sut := monitoring.NewThresholdPolicyWithCluster(10., cluster, mockClient)
+	cmds := []migration.MigrationCmd{{Pod:"w_z2",Usage:60.},{Pod:"q_z2",Usage:40}} // are they always sorted?? if not enough space skip, and try next
+	newcmds := sut.ValidateCmds("z2",cmds)
+	t.Run("choose as much as possible on highest available node", func(t *testing.T) {
+		assert.Equal(t,[]migration.MigrationCmd{{Pod:"q_z2",Usage:40,NewNode:"z1"}},newcmds)
+	})
+	
+	t.Run("same behavior for slope requester",func(t *testing.T){
+		cluster := NewTestCluster()
+		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 60., "q_z2": 40.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 30.})
+		sut := monitoring.NewSlopePolicyWithCluster(10., cluster, mockClient)
+		cmds := []migration.MigrationCmd{{Pod:"w_z2",Usage:60.},{Pod:"q_z2",Usage:40}} // are they always sorted?? if not enough space skip, and try next
+		newcmds := sut.ValidateCmds("z2",cmds)
+		assert.Equal(t,[]migration.MigrationCmd{{Pod:"q_z2",Usage:40,NewNode:"z1"}},newcmds)		
+	})
+}
 
 func TestSlopeRequester(t *testing.T) {
 	cluster := NewTestCluster()
@@ -20,32 +41,6 @@ func TestSlopeRequester(t *testing.T) {
 		
 		sut := monitoring.NewSlopePolicyWithClusterAndTime(10.,5.,cluster, mockClient)
 		assert.ElementsMatch(t,[]monitoring.NodeFreeGbRequest([]monitoring.NodeFreeGbRequest{{Node:"z2", Amount:7.5},{Node:"z1",Amount:5.}}),sut.GetNodeFreeGbRequests())
-	})
-}
-
-func TestSelectNodeWithHighestAvailableMemory(t *testing.T) {
-	cluster := NewTestCluster()
-	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 50., "q_z1": 30.},monitoring.PodMemMap{"w_z3": 10., "q_z3": 5.})
-
-	t.Run("migrate to node with least usage", func(t *testing.T) {
-		sut := monitoring.NewSlopePolicyWithClusterAndTime(10.,5.,cluster, mockClient)
-		migratingNode := sut.ValidateMigrationsTo("z2",7.5)	
-		assert.Equal(t,"z3",migratingNode)
-
-	})	
-}
-
-func TestIsEnoughSpaceAvailable(t *testing.T) {
-	cluster := NewTestCluster()
-	t.Run("fail if other node would be full after migration", func(t *testing.T) {
-		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 30.})
-		sut := monitoring.NewThresholdPolicyWithCluster(40., cluster, mockClient)
-		assert.Equal(t, "", sut.ValidateMigrationsTo("z2", 45.))
-	})
-	t.Run("succeed if enough space", func(t *testing.T) {
-		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 2.})
-		sut := monitoring.NewThresholdPolicyWithCluster(40., cluster, mockClient)
-		assert.Equal(t, "z1", sut.ValidateMigrationsTo("z2", 35.))
 	})
 }
 

@@ -153,6 +153,8 @@ func TestGetMaxPod(t *testing.T) {
 type mockClient struct {
 	mock.Mock
 }
+
+
 func (c *mockClient) GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 	args := c.Called()
 	return args.Get(0).(monitoring.NodeFreeMemMap), args.Error(1)
