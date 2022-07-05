@@ -11,6 +11,17 @@ type RequestPolicy interface {
 	SetThreshold(float64)
 }
 
+func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold float64) RequestPolicy {
+	switch policy {
+	case "slope":
+		return NewSlopePolicyWithCluster(threshold, cluster, client)
+	case "threshold":
+		return NewThresholdPolicyWithCluster(threshold,cluster,client)
+	default:
+		log.Println("Defaulting to threshold request policy. Unknown policy: ",policy)
+		return NewThresholdPolicyWithCluster(threshold,cluster,client)
+	}
+}
 type SlopeRequester struct {
 	ThresholdFreePercent float64
 	Cluster Cluster
@@ -92,18 +103,6 @@ type ThresholdPolicy struct {
 	ThresholdFreePercent float64
 	Cluster              Cluster
 	Client               Clienter
-}
-
-func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold float64) RequestPolicy {
-	switch policy {
-	case "slope":
-		return NewSlopePolicyWithCluster(threshold, cluster, client)
-	case "thresold":
-		return NewThresholdPolicyWithCluster(threshold,cluster,client)
-	default:
-		log.Println("Defaulting to threshold request policy. Unknown policy: ",policy)
-		return NewThresholdPolicyWithCluster(threshold,cluster,client)
-	}
 }
 
 func NewThresholdPolicyWithCluster(percent float64, cluster Cluster, client Clienter) *ThresholdPolicy {

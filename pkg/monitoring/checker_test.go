@@ -8,6 +8,7 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
 )
+const MigrationTime = 5 * time.Minute
 
 var now = time.Now()
 var clockNow = clock.NewClock(now)
@@ -29,7 +30,7 @@ func TestBlockingChecker(t *testing.T) {
 		assert.False(t,sut.IsReady(clockNow.Add(1*time.Second)))
 	})
 	t.Run("ready after backoff", func(t *testing.T){
-		assert.True(t,sut.IsReady(clockNow.Add(monitoring.MigrationTime + monitoring.BackoffInterval)))
+		assert.True(t,sut.IsReady(clockNow.Add(MigrationTime + monitoring.BackoffInterval)))
 	})
 }
 

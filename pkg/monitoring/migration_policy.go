@@ -28,7 +28,7 @@ func NewMigrationPolicyWithChecker(policy string, cluster Cluster,client Cliente
 	case "big-enough":
 		migrator = &BigEnoughMigrator{Cluster: cluster, Client: client}
 	default:
-		log.Println("Defaulting to optimal migration policy. Unknown policy: ",policy)
+		log.Fatal("Unknown migration policy: ",policy)
 		migrator = &OptimalMigrator{Cluster: cluster, Client: client,MinSize:5.}
 	}
 	return MigratorAdapter{MigrationPolicy: migrator, Checker: checker,ClientRef: client.(*FilteredClient)}
@@ -74,7 +74,7 @@ type MigratorAdapter struct {
 
 func (m MigratorAdapter) GetMigrationCmds(now clock.Clock,request NodeFreeGbRequest) ([]migration.MigrationCmd, error) {
 	if !m.Checker.IsReady(now) {
-		return nil, errors.New("checker not ready")
+		return nil, nil // No error otherwise no start of migration; errors.New("checker not ready")
 	}
 	jobsToIgnore := m.Checker.GetMigratingJobs(now)
 	m.ClientRef.UpdateJobsToIgnore(jobsToIgnore)

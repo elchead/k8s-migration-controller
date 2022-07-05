@@ -9,8 +9,7 @@ import (
 )
 
 
-const MigrationTime = 5 * time.Minute
-const BackoffInterval = 45 * time.Second
+const BackoffInterval = 30 * time.Second // at least as big as polling interval of client (to see migration update)
 
 func GetMigrationTime(gbSz float64) time.Duration {
 	return time.Duration(math.Ceil(3.3506*gbSz))*time.Second
