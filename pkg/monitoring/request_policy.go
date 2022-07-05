@@ -69,9 +69,11 @@ func (c SlopeRequester) ValidateCmds(fromNode string,cmds []migration.MigrationC
 	leastNode := getLeastUsedNode(nodeAvailablePercents, fromNode)
 	availablePercent := nodeAvailablePercents[leastNode]
 	freeGb := c.Cluster.getAvailableGb(availablePercent)
+	unableToFit := []migration.MigrationCmd{}
 	for _, cmd := range cmds {
 		newFreeGb := freeGb - cmd.Usage
 		if newFreePercent :=c.Cluster.GetUsagePercent(newFreeGb); newFreePercent < c.ThresholdFreePercent + 5. { // TODO set parameter?
+			unableToFit = append(unableToFit, cmd)
 			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because ", c.Cluster.GetUsagePercent(newFreeGb)  ," would exceed threshold")
 			continue
 		} else {
@@ -79,6 +81,10 @@ func (c SlopeRequester) ValidateCmds(fromNode string,cmds []migration.MigrationC
 			validCmds = append(validCmds, cmd)
 			freeGb = newFreeGb
 		}
+	}
+	if len(unableToFit) > 0 {
+		migerr := &NodeFullError{Request:NodeFreeGbRequest{Node:fromNode},Migrations:unableToFit}
+		log.Println("Provision more nodes: ",migerr.Error())
 	}
 	return
 }
@@ -98,9 +104,11 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 	leastNode := getLeastUsedNode(nodeAvailablePercents, fromNode)
 	availablePercent := nodeAvailablePercents[leastNode]
 	freeGb := c.Cluster.getAvailableGb(availablePercent)
+	unableToFit := []migration.MigrationCmd{}
 	for _, cmd := range cmds {
 		newFreeGb := freeGb - cmd.Usage
 		if newFreePercent :=c.Cluster.GetUsagePercent(newFreeGb); newFreePercent < c.ThresholdFreePercent + 5. { // TODO set parameter?
+			unableToFit = append(unableToFit, cmd)
 			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because ", c.Cluster.GetUsagePercent(newFreeGb)  ," would exceed threshold")
 			continue
 		} else {
@@ -108,6 +116,10 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 			validCmds = append(validCmds, cmd)
 			freeGb = newFreeGb
 		}
+	}
+	if len(unableToFit) > 0 {
+		migerr := &NodeFullError{Request:NodeFreeGbRequest{Node:fromNode},Migrations:unableToFit}
+		log.Println("Provision more nodes: ",migerr.Error())
 	}
 	return
 }
@@ -120,7 +132,7 @@ func NewRequestPolicy(policy string, cluster Cluster,client Clienter,threshold f
 		return NewThresholdPolicyWithCluster(threshold,cluster,client)
 	default:
 		log.Fatal("Unknown request policy: (slope,threshold?) ",policy)
-		return NewThresholdPolicyWithCluster(threshold,cluster,client)
+		return nil
 	}
 }
 
