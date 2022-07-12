@@ -109,7 +109,7 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 		newFreeGb := freeGb - cmd.Usage
 		if newFreePercent :=c.Cluster.GetUsagePercent(newFreeGb); newFreePercent < c.ThresholdFreePercent + 5. { // TODO set parameter?
 			unableToFit = append(unableToFit, cmd)
-			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because ", c.Cluster.GetUsagePercent(newFreeGb)  ," would exceed threshold")
+			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because new free ", c.Cluster.GetUsagePercent(newFreeGb)  ,"% would exceed threshold")
 			continue
 		} else {
 			cmd.NewNode = leastNode
@@ -151,6 +151,7 @@ func (c *ThresholdPolicy) SetThreshold(thresholdPercent float64) {
 
 func (t ThresholdPolicy) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbRequest) {
 	nodes, _ := t.Client.GetFreeMemoryOfNodes()
+	fmt.Println("Threshold req nodes",nodes)
 	for node, availablePercent := range nodes {
 		if availablePercent < t.ThresholdFreePercent {
 			criticalNodes = append(criticalNodes, NodeFreeGbRequest{Node: node, Amount: t.getFreeGbAmount(availablePercent)})
