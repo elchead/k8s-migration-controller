@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"container/heap"
+	"fmt"
 
 	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
@@ -28,15 +29,28 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 	pq := make(PriorityQueue, 0)
 	lenHeap := 0
 	heap.Init(&pq)
-	for name := range podmems {
-		slope, err := m.Client.GetPodMemorySlope(request.Node,name,"","")
+	for podName := range podmems {
+		slope, err := m.Client.GetPodMemorySlope(request.Node,podName,"","")
 		if err != nil {
-			log.L.Info("Error getting slope for pod: ",name)
+			log.L.Info("Error getting slope for pod: ",podName)
+			continue
+		}
+		fmt.Println("Runtime for pod: ",podName, m.Client.GetRuntimePercentage(podName))
+		if perc := m.Client.GetRuntimePercentage(podName); perc > 95 {
+			log.L.Infof("Pod %s has more than 95 percent of runtime: %f. Ignoring for migration",podName,perc)
+			continue
+		}
+		exec := m.Client.GetExecutionTime(podName)
+		runtime := m.Client.GetRuntime(podName)
+		fmt.Printf("runtime %s: %d exectime %d\n",podName,runtime,exec)
+	
+		if runtime - exec < 180 {
+			log.L.Infof("Pod %s remaining runtime is only %d. Ignoring for migration",podName,runtime-exec)
 			continue
 		}
 		if slope > 0. {
 			pq.Push(&Item{
-				Name: name,
+				Name: podName,
 				Priority: slope,
 				Index:    lenHeap,
 			})
@@ -48,7 +62,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 	originalPredictedUsage := predictedUsage
 	for predictedUsage > buffer  {
 		if len(migrations) == lenHeap {
-			log.L.Infof("cannot free up buffer (%.1f) by migrating all pods (predicted usage: %.1f)", buffer,originalPredictedUsage)
+			log.L.Infof("cannot free up buffer (%.1f, node perc %f) by migrating all pods (predicted usage: %.1f)", buffer,nodeMem,originalPredictedUsage)
 			return migrations, nil
 		}
 		item := heap.Pop(&pq).(*Item)

@@ -14,6 +14,9 @@ import (
 func TestSlopeMigrator(t *testing.T) {
 	cluster := NewTestCluster()
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 50., "q_z1": 30.})
+	mockClient.On("GetRuntimePercentage", mock.Anything).Return(50.)
+	mockClient.On("GetExecutionTime", mock.Anything).Return(int32(50))
+	mockClient.On("GetRuntime", mock.Anything).Return(int32(5000))
 	t.Run("migrate pod with biggest slope so that buffer not full", func(t *testing.T) {
 		mockClient.On("GetPodMemorySlope", "z2","w_z2",mock.Anything,mock.Anything).Return(3., nil).Once()
 		mockClient.On("GetPodMemorySlope", "z2","q_z2",mock.Anything,mock.Anything).Return(1., nil).Once()
@@ -46,6 +49,11 @@ func TestSlopeMigrator(t *testing.T) {
 		mockClient.On("GetPodMemorySlope", "z2","q_z2",mock.Anything,mock.Anything).Return(1.5, nil).Once()	
 		mockClient.On("GetPodMemorySlope", "z2","z_z2",mock.Anything,mock.Anything).Return(2., nil).Once()
 		mockClient.On("GetFreeMemoryNode", "z2").Return(5., nil).Once()
+
+		mockClient.On("GetRuntimePercentage", mock.Anything).Return(50.)
+		mockClient.On("GetExecutionTime", mock.Anything).Return(int32(50))
+		mockClient.On("GetRuntime", mock.Anything).Return(int32(5000))
+		
 		res,_ := sut.GetMigrationCmds(monitoring.NodeFreeGbRequest{Node:"z2"})
 		assertMigration(t,res,"z_z2","w_z2","z_z2")
 	})

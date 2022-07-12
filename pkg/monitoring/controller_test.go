@@ -95,6 +95,21 @@ func (c *mockClient) GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 	return args.Get(0).(monitoring.NodeFreeMemMap), args.Error(1)
 }
 
+func (c *mockClient) GetExecutionTime(pod string) (int32) {
+	args := c.Called()
+	return args.Get(0).(int32)
+}
+
+func (c *mockClient) GetRuntime(pod string) (int32) {
+	args := c.Called()
+	return args.Get(0).(int32)
+}
+
+func (c *mockClient) GetRuntimePercentage(pod string) (float64) {
+	args := c.Called()
+	return args.Get(0).(float64)
+}
+
 func (c *mockClient) GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) {
 	args := c.Called(node,podName,time,slopeWindow)
 	return args.Get(0).(float64), args.Error(1)

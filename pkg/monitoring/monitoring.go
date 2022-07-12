@@ -18,6 +18,9 @@ type Clienter interface {
 	GetFreeMemoryNode(nodeName string) (float64, error)
 	GetFreeMemoryOfNodes() (NodeFreeMemMap, error) // in %
 	GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error)
+	GetRuntimePercentage(pod string) (float64)
+	GetExecutionTime(pod string) (int32)
+	GetRuntime(pod string) (int32)
 }
 
 type Client struct {
