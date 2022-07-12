@@ -27,6 +27,10 @@ func NewController(requester RequestPolicy, migrater MigrationPolicy) *Controlle
 	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:7.}
 }
 
+func NewControllerWithMinSize(requester RequestPolicy, migrater MigrationPolicy,minSize float64) *Controller {
+	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:minSize}
+}
+
 type NodeFullError struct{
 	Request NodeFreeGbRequest
 	Migrations []migration.MigrationCmd
