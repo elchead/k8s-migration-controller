@@ -46,6 +46,35 @@ func TestMigration(t *testing.T) {
 	})
 }
 
+func TestDoNotMigrateConditionsWithFilteredClient(t *testing.T) {
+	t.Run("do not migrate pod if migration percentage > 95. instead choose next bigger pod", func(t *testing.T) {
+		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 42., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 10.})
+		client := &monitoring.FilteredClient{mockClient}
+		policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, client)
+		sut := monitoring.NewController(policy,monitoring.NewMigrationPolicy("big-enough",testCluster,client))
+		mockClient.On("GetRuntimePercentage", "q_z2").Return(90.)
+		mockClient.On("GetRuntimePercentage", "w_z2").Return(96.)
+		mockClient.On("GetExecutionTime", mock.Anything).Return(int32(50))
+		mockClient.On("GetRuntime", mock.Anything).Return(int32(5000))
+		migs, err := sut.GetMigrations()
+		assert.NoError(t, err)
+		assert.Equal(t, "q_z2",migs[0].Pod)
+	})
+	t.Run("do not migrate if remaining runtime < 180",func(t *testing.T) {
+		mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 42., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 10.})
+		client := &monitoring.FilteredClient{mockClient}
+		policy := monitoring.NewThresholdPolicyWithCluster(20., testCluster, client)
+		sut := monitoring.NewController(policy,monitoring.NewMigrationPolicy("big-enough",testCluster,client))
+		mockClient.On("GetRuntimePercentage", mock.Anything).Return(90.)
+		mockClient.On("GetExecutionTime", "w_z2").Return(int32(100))
+		mockClient.On("GetRuntime", "w_z2").Return(int32(180))
+		mockClient.On("GetExecutionTime", mock.Anything).Return(int32(50))
+		mockClient.On("GetRuntime", mock.Anything).Return(int32(1000))
+		migs, _ := sut.GetMigrations()
+		assert.Equal(t, "q_z2",migs[0].Pod)
+	})
+}
+
 func NewTestCluster() monitoring.Cluster {
 	return monitoring.Cluster{NbrNodes: 2, NodeGb: testNodeGb}
 }
@@ -96,17 +125,17 @@ func (c *mockClient) GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 }
 
 func (c *mockClient) GetExecutionTime(pod string) (int32) {
-	args := c.Called()
+	args := c.Called(pod)
 	return args.Get(0).(int32)
 }
 
 func (c *mockClient) GetRuntime(pod string) (int32) {
-	args := c.Called()
+	args := c.Called(pod)
 	return args.Get(0).(int32)
 }
 
 func (c *mockClient) GetRuntimePercentage(pod string) (float64) {
-	args := c.Called()
+	args := c.Called(pod)
 	return args.Get(0).(float64)
 }
 
