@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/joho/godotenv"
@@ -29,16 +30,19 @@ func main() {
 	namespace := "playground"
 	cluster := monitoring.NewCluster()
 	requestPolicy := monitoring.NewThresholdPolicyWithCluster(20., cluster, client)
-	migrationPolicy := monitoring.BigEnoughMigrator{Cluster: cluster, Client: client}
+	migrationPolicy := monitoring.NewMigrationPolicy("slope",cluster,client)
 	ctrl := monitoring.NewController(requestPolicy, migrationPolicy)
 
 	ticker := time.NewTicker(3 * time.Second)
+	// checker := monitoring.NewMigrationChecker("blocking")
 	quit := make(chan struct{})
 	for {
 		select {
 		case <-ticker.C:
-			migs, _ := ctrl.GetMigrations()
+			// if checker.IsReady(clock.NewClock(time.Now())) {
+			migs, _ := ctrl.GetMigrations(clock.NewClock(time.Now()))
 			migration.Migrate(migs, namespace)
+			// }
 		case <-quit:
 			ticker.Stop()
 			return

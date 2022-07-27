@@ -83,7 +83,7 @@ func (c *Client) GetPodMemories(nodeName string) (PodMemMap, error) {
 	return c.GetPodMemoriesFromContainer(nodeName, "worker")
 }
 
-func (c *Client) GetPodMemorySlope(podName, time, slopeWindow string) (float64, error) {
+func (c *Client) GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) {
 	return c.GetPodMemorySlopeFromContainer(podName, "worker", time, slopeWindow)
 }
 
