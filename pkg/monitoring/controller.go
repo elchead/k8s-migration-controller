@@ -53,10 +53,9 @@ func (c Controller) GetMigrations(t clock.Clock) (migrations []migration.Migrati
 		if len(validatedCmds) == 0 && len(cmds) > 0 {
 			return migrations, &NodeFullError{request,cmds} 
 		}
-
-		for i,_ := range migrations {
-			c.Migrator.StartMigration(&migrations[i],t)
-
+		for i,_ := range validatedCmds {
+			c.Migrator.StartMigration(&validatedCmds[i],t)
+			migrations = append(migrations,validatedCmds[i])
 		}
 	}
 	return migrations, nil

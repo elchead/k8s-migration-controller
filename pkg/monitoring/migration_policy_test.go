@@ -26,7 +26,7 @@ func TestMigratorBlocksWhenMigInProgress(t *testing.T) {
 	t.Run("throws error after migration start",func(t *testing.T){
 		sut.StartMigration(&migration.MigrationCmd{Pod: "ow_z2", Usage: 20.},now)
 		cmds,err :=sut.GetMigrationCmds(now,monitoring.NodeFreeGbRequest{Node: "z2", Amount: 50.})
-		assert.Error(t, err)
+		assert.NoError(t, err)
 		assert.Empty(t,cmds)
 	})
 	t.Run("no error after migration",func(t *testing.T){
