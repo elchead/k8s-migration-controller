@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-migration-controller/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"

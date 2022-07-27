@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/containerd/containerd/log"
-	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-migration-controller/pkg/clock"
 )
 
 

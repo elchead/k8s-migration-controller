@@ -3,11 +3,12 @@ package monitoring
 import (
 	"errors"
 	"fmt"
-	"knapsack/algorithms"
 	"log"
 	"math"
 
-	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-migration-controller/pkg/algorithms"
+
+	"github.com/elchead/k8s-migration-controller/pkg/clock"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 

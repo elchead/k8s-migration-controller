@@ -5,7 +5,7 @@ import (
 	"log"
 	"os/exec"
 
-	"github.com/elchead/k8s-cluster-simulator/pkg/clock"
+	"github.com/elchead/k8s-migration-controller/pkg/clock"
 )
 
 const kubeconfig = "/home/adrian/config"
