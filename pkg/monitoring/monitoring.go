@@ -84,10 +84,11 @@ func (c *Client) GetPodMemories(nodeName string) (PodMemMap, error) {
 }
 
 func (c *Client) GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) {
-	return c.GetPodMemorySlopeFromContainer(podName, "worker", time, slopeWindow)
+	return c.GetPodMemorySlopeFromContainer(podName, "worker")
 }
 
-func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName, time, slopeWindow string) (float64, error) {
+func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName string) (float64, error) {
+	slopeWindow := c.TimeFrame
 	query := fmt.Sprintf(`import "experimental/aggregate" from(bucket: "%s") 
   |> range(start: %s)
   |> filter(fn: (r) => r["_measurement"] == "kubernetes_pod_container")
@@ -95,7 +96,7 @@ func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName, time, sl
   |> filter(fn: (r) => r["pod_name"] == "%s")
   |> filter(fn: (r) => r["container_name"] == "%s")
   |> aggregate.rate(every: %s, unit: 1m, groupColumns: ["tag1", "tag2"])
-  |> mean()`, c.bucket, time, memoryMetric, podName, containerName, slopeWindow)
+  |> mean()`, c.bucket, c.TimeFrame, memoryMetric, podName, containerName, slopeWindow)
 	res, err := c.Query(query)
 	if err == nil && res.Next()  {
 		num := res.Record().Value()
