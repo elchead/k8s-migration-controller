@@ -16,15 +16,16 @@ type InfluxClient struct {
 	queryAPI  api.QueryAPI
 	bucket    string
 	TimeFrame string // time interval of data to query: e.g. "-5m"
+	SlopeWindow string
 }
 
 func New(serviceUrl, token, org, bucket string) *InfluxClient {
-	return NewClientWithTime(serviceUrl, token, org, bucket, "-20m")
+	return NewClientWithTime(serviceUrl, token, org, bucket, "-20m","-2m")
 }
 
-func NewClientWithTime(serviceUrl, token, org, bucket, time string) *InfluxClient {
+func NewClientWithTime(serviceUrl, token, org, bucket, time,slopeWindow string) *InfluxClient {
 	client := influxdb2.NewClientWithOptions(serviceUrl, token, influxdb2.DefaultOptions())
-	return &InfluxClient{client, client.QueryAPI(org), bucket, time}
+	return &InfluxClient{client, client.QueryAPI(org), bucket, time,slopeWindow}
 }
 
 func (c *InfluxClient) Query(query string) (*api.QueryTableResult, error) {
@@ -68,7 +69,6 @@ func (c *InfluxClient) GetPodMemorySlopeFromContainer(podName, containerName str
   |> filter(fn: (r) => r["container_name"] == "%s")
   |> aggregate.rate(every: %s, unit: 1m, groupColumns: ["tag1", "tag2"])
   |> mean()`, c.bucket, c.TimeFrame, memoryMetric, podName, containerName, slopeWindow)
-  fmt.Println(query)
 	res, err := c.Query(query)
 	if err == nil && res.Next()  {
 		num := res.Record().Value()
