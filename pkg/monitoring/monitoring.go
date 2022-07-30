@@ -17,7 +17,7 @@ type Clienter interface {
 	GetPodMemories(nodeName string) (PodMemMap, error)
 	GetFreeMemoryNode(nodeName string) (float64, error)
 	GetFreeMemoryOfNodes() (NodeFreeMemMap, error) // in %
-	GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error)
+	GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) // TODO remove time + slope window 
 }
 
 type Client struct {
@@ -103,7 +103,7 @@ func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName string) (
 		if val, ok := num.(float64); ok {
 			return val, nil
 		} else {
-			return -1., errors.New("conversion error")
+			return -1., errors.New(fmt.Sprintf("conversion error: %+v",num))
 		}
 	}
 	return -1., err
