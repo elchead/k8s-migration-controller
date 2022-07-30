@@ -56,6 +56,9 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 		log.L.Info("Migrating pod: ",item.Name,", slope: ",item.Priority)
 		migrations = append(migrations, migration.MigrationCmd{Pod:item.Name,Usage:podmems[item.Name]})
 	}
+	if len(migrations) == 0 {
+		log.L.Infof("Predicted usage %.1f is less than buffer %.1f",originalPredictedUsage,buffer)
+	}
 	return 
 }
 

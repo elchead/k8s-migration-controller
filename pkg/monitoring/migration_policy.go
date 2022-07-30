@@ -217,6 +217,7 @@ func (c BigEnoughMigrator) GetMigrationCmds(request NodeFreeGbRequest) ([]migrat
 	if podMem < request.Amount {
 		err = fmt.Errorf("migration of pod (%f) on node %s does not fullfill request (%f)", podMem,request.Node, request.Amount)
 	}
+	log.Println(pod)
 	return []migration.MigrationCmd{{Pod: pod, Usage: podMem}}, err
 }
 

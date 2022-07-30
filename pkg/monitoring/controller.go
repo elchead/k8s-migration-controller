@@ -41,8 +41,9 @@ func (c Controller) GetMigrations(t clock.Clock) (migrations []migration.Migrati
 	nodeFreeRequests := c.Requester.GetNodeFreeGbRequests()
 	for _, request := range nodeFreeRequests {
 		if request.Amount < c.MinRequestSize {
-			log.Printf("migrator request too small, ignoring %v", request.Amount)
-			return nil, nil
+			log.Printf("migrator request on node %s too small, ignoring %v", request.Node,request.Amount)
+			continue
+			// return nil, nil
 		}		
 		log.Printf("migrator requesting: %v\n", request)
 		cmds, err := c.Migrator.GetMigrationCmds(t,request)
@@ -50,6 +51,7 @@ func (c Controller) GetMigrations(t clock.Clock) (migrations []migration.Migrati
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
 		validatedCmds := c.Requester.ValidateCmds(request.Node,cmds)
+		fmt.Println(cmds,validatedCmds)
 		if len(validatedCmds) == 0 && len(cmds) > 0 {
 			return migrations, &NodeFullError{request,cmds} 
 		}

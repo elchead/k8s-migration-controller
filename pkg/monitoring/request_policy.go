@@ -112,7 +112,7 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 	for _, cmd := range cmds {
 		newFreeGb := freeGb - cmd.Usage
 		if newFreePercent :=c.Cluster.GetUsagePercent(newFreeGb); newFreePercent < c.ThresholdFreePercent + 5. { // TODO set parameter?
-			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because ", c.Cluster.GetUsagePercent(newFreeGb)  ," would exceed threshold")
+			log.Println("Skipping cmd ",cmd.Pod," with usage ",cmd.Usage," to node ",leastNode," because new free memory ", c.Cluster.GetUsagePercent(newFreeGb)  ,"% would exceed threshold")
 			continue
 		} else {
 			cmd.NewNode = leastNode
