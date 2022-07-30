@@ -22,7 +22,7 @@ func main() {
 	client := monitoring.NewClientWithTime(url, token, org, "default", "-2m")
 	namespace := "playground"
 	cluster := monitoring.NewCluster()
-	requestPolicy := monitoring.NewThresholdPolicyWithCluster(20., cluster, client)
+	requestPolicy := monitoring.NewThresholdPolicyWithCluster(30., cluster, client)
 	migrationPolicy := monitoring.NewMigrationPolicy("slope",cluster,client)
 	ctrl := monitoring.NewController(requestPolicy, migrationPolicy)
 
