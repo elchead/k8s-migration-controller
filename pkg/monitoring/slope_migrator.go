@@ -34,7 +34,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 			log.L.Info("Error getting slope for pod: ",name, err)
 			continue
 		}
-		if slope > 0. {
+		if slope > 1 {
 			pq.Push(&Item{
 				Name: name,
 				Priority: slope,
