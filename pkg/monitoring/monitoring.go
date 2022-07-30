@@ -97,7 +97,7 @@ func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName, time, sl
   |> aggregate.rate(every: %s, unit: 1m, groupColumns: ["tag1", "tag2"])
   |> mean()`, c.bucket, time, memoryMetric, podName, containerName, slopeWindow)
 	res, err := c.Query(query)
-	if res.Next() && err == nil {
+	if err == nil && res.Next()  {
 		num := res.Record().Value()
 		if val, ok := num.(float64); ok {
 			return val, nil

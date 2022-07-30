@@ -26,10 +26,10 @@ func init() {
 func main() {
 	url := "https://westeurope-1.azure.cloud2.influxdata.com"
 	org := "stobbe.adrian@gmail.com"
-	client := monitoring.NewWithTime(url, token, org, "default", "-5h")
+	client := monitoring.NewWithTime(url, token, org, "default", "-2m")
 	namespace := "playground"
 	cluster := monitoring.NewCluster()
-	requestPolicy := monitoring.NewThresholdPolicyWithCluster(20., cluster, client)
+	requestPolicy := monitoring.NewThresholdPolicyWithCluster(99., cluster, client)
 	migrationPolicy := monitoring.NewMigrationPolicy("slope",cluster,client)
 	ctrl := monitoring.NewController(requestPolicy, migrationPolicy)
 
