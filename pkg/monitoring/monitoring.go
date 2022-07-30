@@ -88,7 +88,7 @@ func (c *Client) GetPodMemorySlope(node,podName, time, slopeWindow string) (floa
 }
 
 func (c *Client) GetPodMemorySlopeFromContainer(podName, containerName string) (float64, error) {
-	slopeWindow := c.TimeFrame
+	slopeWindow := c.TimeFrame[1:] // drop minus
 	query := fmt.Sprintf(`import "experimental/aggregate" from(bucket: "%s") 
   |> range(start: %s)
   |> filter(fn: (r) => r["_measurement"] == "kubernetes_pod_container")
