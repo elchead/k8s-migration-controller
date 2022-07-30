@@ -51,7 +51,6 @@ func (c Controller) GetMigrations(t clock.Clock) (migrations []migration.Migrati
 			return nil,errors.Wrap(err, "problem during migration request")
 		}
 		validatedCmds := c.Requester.ValidateCmds(request.Node,cmds)
-		fmt.Println(cmds,validatedCmds)
 		if len(validatedCmds) == 0 && len(cmds) > 0 {
 			return migrations, &NodeFullError{request,cmds} 
 		}

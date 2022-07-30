@@ -46,6 +46,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 		}
 	}
 	originalPredictedUsage := predictedUsage
+	log.L.Infof("Predicted usage %.1f; buffer %.1f",originalPredictedUsage,buffer)
 	for predictedUsage > buffer  {
 		if len(migrations) == lenHeap {
 			log.L.Infof("cannot free up buffer (%.1f) by migrating all pods (predicted usage: %.1f)", buffer,originalPredictedUsage)
