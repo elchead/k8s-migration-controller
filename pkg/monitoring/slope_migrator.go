@@ -2,6 +2,7 @@ package monitoring
 
 import (
 	"container/heap"
+	"fmt"
 
 	"github.com/containerd/containerd/log"
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
@@ -34,6 +35,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 			log.L.Info("Error getting slope for pod: ",name, err)
 			continue
 		}
+		fmt.Println("Pod:",name,"Slope:",slope)
 		if slope > 1 {
 			pq.Push(&Item{
 				Name: name,

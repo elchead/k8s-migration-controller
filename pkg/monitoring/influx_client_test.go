@@ -20,7 +20,7 @@ func TestClient(t *testing.T) {
 	assert.NotEmpty(t,token)
 	url := "https://westeurope-1.azure.cloud2.influxdata.com"
 	org := "stobbe.adrian@gmail.com"
-	client := monitoring.NewClientWithTime(url, token, org, "default", "-2m")
+	client := monitoring.NewClientWithTime(url, token, org, "default", "-2m","-1m")
 	mems, err := client.GetFreeMemoryOfNodes()
 	assert.NoError(t, err)
 	assert.Equal(t,mems,"r")
