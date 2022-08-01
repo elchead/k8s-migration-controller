@@ -25,7 +25,7 @@ func NewControllerWithPolicy(policy *ThresholdPolicy) *Controller {
 }
 
 func NewController(requester RequestPolicy, migrater MigrationPolicyNew) *Controller {
-	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:7.}
+	return &Controller{Requester:requester, Migrator:migrater,MinRequestSize:0.}
 }
 
 type NodeFullError struct{
