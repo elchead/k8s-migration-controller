@@ -26,7 +26,7 @@ func main() {
 	migrationPolicy := monitoring.NewMigrationPolicy("slope",cluster,client)
 	ctrl := monitoring.NewController(requestPolicy, migrationPolicy)
 
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(15 * time.Second)
 	// checker := monitoring.NewMigrationChecker("blocking")
 	quit := make(chan struct{})
 	for {
