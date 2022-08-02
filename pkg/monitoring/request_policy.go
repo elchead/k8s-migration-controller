@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	clog "github.com/containerd/containerd/log"
+
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 )
 
@@ -54,7 +56,7 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 		predictedPercent := t.Cluster.GetUsagePercent(predictedUsage)
 		freePercent := availablePercent - predictedPercent
 		if freePercent < t.ThresholdFreePercent {
-			fmt.Println("Requester predicts usage ",predictedUsage,"GB of node",node," currently free ", t.Cluster.getAvailableGb(availablePercent),"GB ", availablePercent, " %")
+			clog.L.Infof("Requester predicts usage ",predictedUsage,"GB of node",node," currently free ", t.Cluster.getAvailableGb(availablePercent),"GB ", availablePercent, " %")
 			criticalNodes = append(criticalNodes, NodeFreeGbRequest{Node: node, Amount: getFreeGbAmount(t.ThresholdFreePercent,freePercent,t.Cluster)})
 		}
 	}

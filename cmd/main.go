@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/elchead/k8s-migration-controller/pkg/clock"
@@ -32,11 +31,7 @@ func main() {
 		select {
 		case <-ticker.C:
 			migs, _ := ctrl.GetMigrations(clock.NewClock(time.Now()))
-			if (len(migs) > 0) {
-				fmt.Println(migs)
-			}
 			migration.Migrate(migs, namespace)
-			// }
 		case <-quit:
 			ticker.Stop()
 			return

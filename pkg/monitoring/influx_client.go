@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/containerd/containerd/log"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
 )
@@ -115,7 +116,7 @@ func (c *InfluxClient) GetFreeMemoryOfNodes() (NodeFreeMemMap, error) {
 		node := table.ValueByKey("host").(string)
 		available_percent := table.Value().(float64)
 		mp[node] = available_percent
-		fmt.Println("Free memory of", node, available_percent, "%")
+		log.L.Info("Free memory of", node, available_percent, "%")
 	}
 	return mp, err
 }

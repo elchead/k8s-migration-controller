@@ -2,8 +2,9 @@ package migration
 
 import (
 	"fmt"
-	"log"
 	"os/exec"
+
+	"github.com/containerd/containerd/log"
 
 	"github.com/elchead/k8s-migration-controller/pkg/clock"
 )
@@ -25,10 +26,10 @@ type MigrationCmd struct {
 
 func Migrate(migs []MigrationCmd, namespace string) {
 	for _, m := range migs {
-		fmt.Println("Migrating", m.Pod, "wich uses", m.Usage, "GB")
+		log.L.Infof("Migrating", m.Pod, "which uses", m.Usage, "GB")
 		err := New(m.Pod, namespace).Migrate()
 		if err != nil {
-			log.Printf("Migration failed: %v", err)
+			log.L.Warnf("Migration failed: %v", err)
 		}
 	}
 }
