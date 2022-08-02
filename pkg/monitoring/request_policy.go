@@ -75,6 +75,7 @@ func getLeastUsedNode(nodeAvailablePercents NodeFreeMemMap, originalNode string)
 	return leastNode
 }
 
+// TODO DRY (see thresholdReq)
 func (c SlopeRequester) ValidateCmds(fromNode string,cmds []migration.MigrationCmd) (validCmds []migration.MigrationCmd) {
 	nodeAvailablePercents,_ := c.Client.GetFreeMemoryOfNodes()
 	leastNode := getLeastUsedNode(nodeAvailablePercents, fromNode)
@@ -102,6 +103,7 @@ type ThresholdPolicy struct {
 	ThresholdFreePercent float64
 	Cluster              Cluster
 	Client               Clienter
+	SingleMigration bool
 }
 
 func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.MigrationCmd) (validCmds []migration.MigrationCmd) {
@@ -120,13 +122,18 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 			freeGb = newFreeGb
 		}
 	}
+	if c.SingleMigration {
+		validCmds = validCmds[:1]
+	}
 	return
 }
 
-
+func NewSingleThresholdPolicyWithCluster(freePercent float64, cluster Cluster, client Clienter) *ThresholdPolicy {
+	return &ThresholdPolicy{freePercent, cluster, client,true}
+}
 
 func NewThresholdPolicyWithCluster(freePercent float64, cluster Cluster, client Clienter) *ThresholdPolicy {
-	return &ThresholdPolicy{freePercent, cluster, client}
+	return &ThresholdPolicy{freePercent, cluster, client,false}
 }
 
 type NodeFreeGbRequest struct {

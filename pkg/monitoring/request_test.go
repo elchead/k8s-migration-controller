@@ -9,6 +9,22 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+func TestSingleMigrationS(t *testing.T) {
+	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"ow_z2": 20., "oq_z2": 35.}, monitoring.PodMemMap{"ow_z1": 10.})
+
+
+	t.Run("two migs without SingleMigration", func(t *testing.T) {
+		sut := monitoring.NewThresholdPolicyWithCluster(30., cluster, mockClient)
+		res := sut.ValidateCmds("z2",[]migration.MigrationCmd{{Pod:"ow_z2",Usage:20.},{Pod:"oq_z2",Usage:35}})
+		assert.Len(t,res,2)
+	})
+	t.Run("single mig with SingleMigration",func(t *testing.T) {
+		sut := monitoring.NewSingleThresholdPolicyWithCluster(30., cluster, mockClient)
+		res := sut.ValidateCmds("z2",[]migration.MigrationCmd{{Pod:"ow_z2",Usage:20.},{Pod:"oq_z2",Usage:35}})
+		assert.Len(t,res,1)	
+	})
+}
+
 func TestThresholdRequesterValidatesAsMuchAsPossible(t *testing.T){
 	cluster := NewTestCluster()
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 60., "q_z2": 40.}, monitoring.PodMemMap{"w_z1": 1., "q_z1": 30.},monitoring.PodMemMap{"w_z3": 30., "q_z3": 5.})
