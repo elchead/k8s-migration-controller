@@ -116,7 +116,7 @@ func (c *InfluxClient) GetFreeMemoryOfNodes() (NodeFreeMemMap, error) {
 		node := table.ValueByKey("host").(string)
 		available_percent := table.Value().(float64)
 		mp[node] = available_percent
-		log.L.Infof("Free memory of %s: %f %", node, available_percent)
+		log.L.Infof("Free memory of %s: %f %%", node, available_percent)
 	}
 	return mp, err
 }
