@@ -26,7 +26,7 @@ type MigrationCmd struct {
 
 func Migrate(migs []MigrationCmd, namespace string) {
 	for _, m := range migs {
-		log.L.Infof("Migrating", m.Pod, "which uses", m.Usage, "GB")
+		log.L.Infof("Migrating %s which uses %f GB", m.Pod, m.Usage)
 		err := New(m.Pod, namespace).Migrate()
 		if err != nil {
 			log.L.Warnf("Migration failed: %v", err)
