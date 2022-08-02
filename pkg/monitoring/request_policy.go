@@ -124,7 +124,7 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 			freeGb = newFreeGb
 		}
 	}
-	if c.SingleMigration {
+	if c.SingleMigration && len(validCmds) > 1 {
 		validCmds = validCmds[:1]
 	}
 	return
