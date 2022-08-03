@@ -22,6 +22,7 @@ func TestSingleMigrationS(t *testing.T) {
 		sut := monitoring.NewSingleThresholdPolicyWithCluster(30., cluster, mockClient)
 		res := sut.ValidateCmds("z2",[]migration.MigrationCmd{{Pod:"ow_z2",Usage:20.},{Pod:"oq_z2",Usage:35}})
 		assert.Len(t,res,1)	
+		assert.Equal(t,35.,res[0].Usage)
 	})
 }
 

@@ -56,7 +56,7 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 		predictedPercent := t.Cluster.GetUsagePercent(predictedUsage)
 		freePercent := availablePercent - predictedPercent
 		if freePercent < t.ThresholdFreePercent {
-			clog.L.Infof("Requester predicts usage ",predictedUsage,"GB of node",node," currently free ", t.Cluster.getAvailableGb(availablePercent),"GB ", availablePercent, " %")
+			clog.L.Infof("Requester predicts usage %f on node %s, where currently %f GB  ( %f %% ) are free ",predictedUsage,node,t.Cluster.getAvailableGb(availablePercent), availablePercent)
 			criticalNodes = append(criticalNodes, NodeFreeGbRequest{Node: node, Amount: getFreeGbAmount(t.ThresholdFreePercent,freePercent,t.Cluster)})
 		}
 	}
@@ -125,7 +125,16 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 		}
 	}
 	if c.SingleMigration && len(validCmds) > 1 {
-		validCmds = validCmds[:1]
+		maxUsageCmd := 0.
+		maxUsageIdx := -1
+		for i, cmd := range validCmds {
+			if cmd.Usage > maxUsageCmd {
+			    maxUsageCmd = cmd.Usage
+			    maxUsageIdx = i
+			}
+		}
+		
+		validCmds = validCmds[maxUsageIdx:maxUsageIdx+1]
 	}
 	return
 }
