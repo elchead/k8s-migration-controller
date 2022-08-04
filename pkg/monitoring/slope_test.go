@@ -19,7 +19,7 @@ func TestSlopeMigrator(t *testing.T) {
 		mockClient.On("GetFreeMemoryNode", "z2").Return(10., nil).Once() // 10% = 10Gb	
 		sut := monitoring.SlopeMigrator{Cluster:cluster, Client:mockClient,TimeAhead:5.}
 		res,_ := sut.GetMigrationCmds(monitoring.NodeFreeGbRequest{Node:"z2"})
-		assertMigration(t,res,"w_z2")
+		assertMigrationAndTheirOrder(t,res,"w_z2")
 	})
 	t.Run("no migration when no slope for any pod",func(t *testing.T){
 		sut := monitoring.SlopeMigrator{Cluster:cluster, Client:mockClient,TimeAhead:5.}
@@ -43,10 +43,10 @@ func TestSlopeMigrator(t *testing.T) {
 		sut := monitoring.SlopeMigrator{Cluster:cluster, Client:mockClient,TimeAhead:5.}
 		mockClient.On("GetPodMemorySlope", "z2","w_z2").Return(2., nil).Once()
 		mockClient.On("GetPodMemorySlope", "z2","q_z2").Return(1.5, nil).Once()	
-		mockClient.On("GetPodMemorySlope", "z2","z_z2").Return(2., nil).Once()
+		mockClient.On("GetPodMemorySlope", "z2","z_z2").Return(3., nil).Once()
 		mockClient.On("GetFreeMemoryNode", "z2").Return(5., nil).Once()
 		res,_ := sut.GetMigrationCmds(monitoring.NodeFreeGbRequest{Node:"z2"})
-		assertMigration(t,res,"z_z2","w_z2","z_z2")
+		assertMigrationAndTheirOrder(t,res,"z_z2","w_z2","q_z2")
 	})
 }
 
@@ -72,17 +72,17 @@ func TestPriorityQueue(t *testing.T) {
 	// assert.Nil(t,heap.Pop(&pq))
 }
 
-func assertMigration(t testing.TB,res []migration.MigrationCmd,podName... string) {
+func assertMigrationAndTheirOrder(t testing.TB,res []migration.MigrationCmd,podName... string) {
 	podsLen := len(podName)
 	assert.Len(t,res,podsLen)
-	for _,pod := range podName {
+	for i,pod := range podName {
 		inside := false
-		for i,_ := range res {
-			if res[i].Pod == pod {
-				inside = true
-			}
+		if res[i].Pod == pod {
+			inside = true
 		}
-		assert.True(t,inside,"migrations do not contain "+pod)
+		// for i,_ := range res {
+		// }
+		assert.True(t,inside,"migration not at expected place: "+pod)
 	}
 }
 
