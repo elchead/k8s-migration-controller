@@ -30,7 +30,7 @@ func (m SlopeMigrator) GetMigrationCmds(request NodeFreeGbRequest) (migrations [
 	lenHeap := 0
 	heap.Init(&pq)
 	for name := range podmems {
-		slope, err := m.Client.GetPodMemorySlope(request.Node,name,"-5","")
+		slope, err := m.Client.GetPodMemorySlope(request.Node,name)
 		if err != nil {
 			log.L.Info("Error getting slope for pod: ",name, err)
 			continue

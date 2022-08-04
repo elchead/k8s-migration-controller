@@ -24,7 +24,7 @@ type Clienter interface {
 	GetPodMemories(nodeName string) (PodMemMap, error)
 	GetFreeMemoryNode(nodeName string) (float64, error)
 	GetFreeMemoryOfNodes() (NodeFreeMemMap, error) // in %
-	GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) // TODO remove time + slope window  // in GB
+	GetPodMemorySlope(node,podName string) (float64, error) // in GB
 }
 
 func (original PodMemMap) Copy() PodMemMap {

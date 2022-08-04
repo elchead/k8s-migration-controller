@@ -160,8 +160,8 @@ func (c *mockClient) GetFreeMemoryOfNodes() (monitoring.NodeFreeMemMap, error) {
 	return args.Get(0).(monitoring.NodeFreeMemMap), args.Error(1)
 }
 
-func (c *mockClient) GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) {
-	args := c.Called(node,podName,time,slopeWindow)
+func (c *mockClient) GetPodMemorySlope(node,podName string) (float64, error) {
+	args := c.Called(node,podName)
 	return args.Get(0).(float64), args.Error(1)
 }
 

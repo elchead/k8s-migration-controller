@@ -6,7 +6,6 @@ import (
 	"github.com/elchead/k8s-migration-controller/pkg/migration"
 	"github.com/elchead/k8s-migration-controller/pkg/monitoring"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestSingleMigrationS(t *testing.T) {
@@ -51,10 +50,10 @@ func TestSlopeRequester(t *testing.T) {
 	mockClient := setupMockClient(testNodeGb, monitoring.PodMemMap{"w_z2": 40., "q_z2": 45.}, monitoring.PodMemMap{"w_z1": 50., "q_z1": 30.})
 
 	t.Run("request 7.5gb on z2 when 10gb should be free, 15 gb are free and predicted usage is 12.5gb. request on z1 too ", func(t *testing.T) {
-		mockClient.On("GetPodMemorySlope", "z1","w_z1",mock.Anything,mock.Anything).Return(3., nil)
-		mockClient.On("GetPodMemorySlope", "z1","q_z1",mock.Anything,mock.Anything).Return(0., nil)
-		mockClient.On("GetPodMemorySlope", "z2","w_z2",mock.Anything,mock.Anything).Return(1.5, nil)
-		mockClient.On("GetPodMemorySlope", "z2","q_z2",mock.Anything,mock.Anything).Return(1., nil)
+		mockClient.On("GetPodMemorySlope", "z1","w_z1").Return(3., nil)
+		mockClient.On("GetPodMemorySlope", "z1","q_z1").Return(0., nil)
+		mockClient.On("GetPodMemorySlope", "z2","w_z2").Return(1.5, nil)
+		mockClient.On("GetPodMemorySlope", "z2","q_z2").Return(1., nil)
 		
 		sut := monitoring.NewSlopePolicyWithClusterAndTime(10.,5.,cluster, mockClient)
 		assert.ElementsMatch(t,[]monitoring.NodeFreeGbRequest([]monitoring.NodeFreeGbRequest{{Node:"z2", Amount:7.5},{Node:"z1",Amount:5.}}),sut.GetNodeFreeGbRequests())

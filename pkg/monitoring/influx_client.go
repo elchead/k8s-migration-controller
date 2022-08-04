@@ -56,7 +56,7 @@ func (c *InfluxClient) GetPodMemories(nodeName string) (PodMemMap, error) {
 	return c.GetPodMemoriesFromContainer(nodeName, "worker")
 }
 
-func (c *InfluxClient) GetPodMemorySlope(node,podName, time, slopeWindow string) (float64, error) {
+func (c *InfluxClient) GetPodMemorySlope(node,podName string) (float64, error) {
 	return c.GetPodMemorySlopeFromContainer(podName, "worker")
 }
 

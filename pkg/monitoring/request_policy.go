@@ -48,7 +48,7 @@ func (t SlopeRequester) GetNodeFreeGbRequests() (criticalNodes []NodeFreeGbReque
 		pods, _ := t.Client.GetPodMemories(node)
 		slope := 0.
 		for podname := range pods {
-			s, _ := t.Client.GetPodMemorySlope(node, podname, "now", "1m")
+			s, _ := t.Client.GetPodMemorySlope(node, podname)
 			slope += s	
 			
 		}
