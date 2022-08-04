@@ -125,16 +125,16 @@ func (c ThresholdPolicy) ValidateCmds(fromNode string,cmds []migration.Migration
 		}
 	}
 	if c.SingleMigration && len(validCmds) > 1 {
-		maxUsageCmd := 0.
-		maxUsageIdx := -1
-		for i, cmd := range validCmds {
-			if cmd.Usage > maxUsageCmd {
-			    maxUsageCmd = cmd.Usage
-			    maxUsageIdx = i
-			}
-		}
+		// maxUsageCmd := 0.
+		// maxUsageIdx := -1
+		// for i, cmd := range validCmds {
+		// 	if cmd.Usage > maxUsageCmd {
+		// 	    maxUsageCmd = cmd.Usage
+		// 	    maxUsageIdx = i
+		// 	}
+		// }
 		
-		validCmds = validCmds[maxUsageIdx:maxUsageIdx+1]
+		validCmds = validCmds[:1] //validCmds[maxUsageIdx:maxUsageIdx+1]
 	}
 	return
 }
