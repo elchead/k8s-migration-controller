@@ -2,6 +2,10 @@
 
 This controller is part of a research project to investigate the feasibility of speculative scheduling of long-running stateful jos with unknown resource requirements in Kubernetes. The controller is intended to migrate stateful workloads in a Kubernetes cluster. This can be useful for resilience to failure and to improve resource utilization through speculative scheduling.
 
+## Demo
+
+A quick demonstration video with a simple workload scenario is available [here](https://www.youtube.com/watch?v=t-TGMeJhXWw&ab_channel=AdrianStobbe)
+
 ## Architecture
 
 The controller observes the node memory on the cluster (implemented for InfluxDB).
